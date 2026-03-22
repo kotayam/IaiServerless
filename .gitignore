@@ -1,7 +1,7 @@
 *.o
+*.bin
 
 # host loader
 host/host_loader
 
 # samples
-samples/hello
