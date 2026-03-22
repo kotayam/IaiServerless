@@ -254,8 +254,6 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
   struct kvm_sregs sregs;
   struct kvm_regs regs;
 
-  printf("Testing 64-bit mode\n");
-
   if (ioctl(vcpu->fd, KVM_GET_SREGS, &sregs) < 0) {
     perror("KVM_GET_SREGS");
     exit(1);
