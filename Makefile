@@ -15,7 +15,7 @@ samples:
 
 shim:
 	@echo "=== Building Shim Library ==="
-	# $(MAKE) -C shim
+	$(MAKE) -C shim
 
 clean:
 	@echo "=== Cleaning Host ==="
