@@ -14,7 +14,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	// extract function name
 	funcName := strings.TrimPrefix(r.URL.Path, "/")
 	if funcName == "" {
-		http.Error(w, "Function name required. Example: /hello", http.StatusBadRequest)
+		http.Error(w, "IaiServerless Gateway is active. Request a function like /hello", http.StatusBadRequest)
 		return
 	}
 
