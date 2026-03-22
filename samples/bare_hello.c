@@ -5,7 +5,7 @@ static inline void outb(unsigned short port, unsigned char value) {
 
 // _start is the standard entry point for raw binaries
 void _start() {
-  const char *msg = "Hello from bare metal KVM!\n";
+  const char *msg = "Hello from bare metal KVM!";
 
   // Loop through the string and send each character to port 0xE9
   for (int i = 0; msg[i] != '\0'; i++) {
