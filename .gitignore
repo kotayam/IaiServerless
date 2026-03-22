@@ -1,0 +1,4 @@
+*.o
+
+# host loader
+host/host_loader
