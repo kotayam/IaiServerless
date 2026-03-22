@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 /* CR0 bits */
@@ -55,6 +56,14 @@
 #define PDE64_DIRTY (1U << 6)
 #define PDE64_PS (1U << 7)
 #define PDE64_G (1U << 8)
+
+// usage message
+#define USAGE(bin)                                                             \
+  fprintf(stderr, "Usage: %s [-m memory_in_MB] <binary_file>\n", bin)
+
+// default memory size 2MB
+#define MB 1024 * 1024
+#define DEFAULT_MEM_SIZE 2 * MB
 
 struct vm {
   int sys_fd;
@@ -185,17 +194,17 @@ check:
 
   if (regs.rax != 42) {
     printf("Wrong result: {E,R,}AX is %lld\n", regs.rax);
-    return 0;
+    return 1;
   }
 
   memcpy(&memval, &vm->mem[0x400], sz);
   if (memval != 42) {
     printf("Wrong result: memory at 0x400 is %lld\n",
            (unsigned long long)memval);
-    return 0;
+    return 1;
   }
 
-  return 1;
+  return 0;
 }
 
 extern const unsigned char guest64[], guest64_end[];
@@ -277,10 +286,79 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
   return run_vm(vm, vcpu, 8);
 }
 
+/**
+ * @brief Load binary to run in the VM.
+ */
+void load_binary(struct vm *vm, const char *filename, size_t max_mem_size) {
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0) {
+    perror("Failed to open binary file");
+    exit(1);
+  }
+
+  // get the size of the file
+  struct stat st;
+  if (fstat(fd, &st) < 0) {
+    perror("Failed to stat binary file");
+    close(fd);
+    exit(1);
+  }
+
+  // ensure binary is not bigger than VM's physical memory
+  if ((size_t)st.st_size > max_mem_size) {
+    fprintf(stderr, "Error: Binary size (%lld) exceeds VM memory size (%zu)\n",
+            (long long)st.st_size, max_mem_size);
+    close(fd);
+    exit(1);
+  }
+
+  ssize_t bytes_read = read(fd, vm->mem, st.st_size);
+  if (bytes_read < 0 || bytes_read != st.st_size) {
+    perror("Failed to read entire binary into guest memory");
+    close(fd);
+    exit(1);
+  }
+
+  printf("Successfully loaded %zd bytes from '%s' into guest memory.\n",
+         bytes_read, filename);
+  close(fd);
+}
+
 int main(int argc, char **argv) {
+  size_t mem_size = DEFAULT_MEM_SIZE;
+  int opt;
+
+  while ((opt = getopt(argc, argv, "m:")) != -1) {
+    switch (opt) {
+    case 'm':
+      mem_size = (size_t)strtoull(optarg, NULL, 10) * MB;
+      if (mem_size <= 0) {
+        fprintf(stderr, "Error: Invalid memory size.\n");
+        return 1;
+      }
+      break;
+    default:
+      USAGE(argv[0]);
+      return 1;
+    }
+  }
+
+  if (optind >= argc) {
+    fprintf(stderr, "Error: Missing required binary file.\n");
+    USAGE(argv[0]);
+    return 1;
+  }
+
+  const char *bin_filename = argv[optind];
+
+  printf("Starting VM with %zu bytes of memory...\n", mem_size);
+
   struct vm vm;
   struct vcpu vcpu;
   vm_init(&vm, 0x200000);
+  load_binary(&vm, bin_filename, mem_size);
   vcpu_init(&vm, &vcpu);
-  return !run_long_mode(&vm, &vcpu);
+
+  // run the VM
+  return run_long_mode(&vm, &vcpu);
 }
