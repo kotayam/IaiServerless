@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/http"
@@ -32,16 +33,25 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("../host/host_loader", binPath)
 
 	// capture stdout and stderr from loader
-	output, err := cmd.CombinedOutput()
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	err := cmd.Run()
+
+	if stderrBuf.Len() > 0 {
+		// log stderr from host loader
+		log.Printf("[Host Loader -> %s]:\n%s", safeName, stderrBuf.String())
+	}
+
 	if err != nil {
 		// if KVM crashes, return a 500 error with the host loader's output
-		http.Error(w, fmt.Sprintf("VM execution failed: %v\nOutput:\n%s", err, string(output)), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("VM execution failed: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// send binary output directly to the client
 	w.WriteHeader(http.StatusOK)
-	w.Write(output)
+	w.Write(stdoutBuf.Bytes())
 }
 
 func main() {

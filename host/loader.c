@@ -161,10 +161,11 @@ int run_vm(struct vcpu *vcpu) {
 
     switch (vcpu->kvm_run->exit_reason) {
     case KVM_EXIT_HLT:
-      printf("\n[Host] Guest execution completed cleanly.\n");
+      fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
       return 0;
 
     case KVM_EXIT_IO:
+      // forward binary I/O write to stdout
       if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
           vcpu->kvm_run->io.port == 0xE9) {
         char *p = (char *)vcpu->kvm_run;
@@ -292,8 +293,9 @@ void load_binary(struct vm *vm, const char *filename, size_t max_mem_size) {
     exit(1);
   }
 
-  printf("Successfully loaded %zd bytes from '%s' into guest memory.\n",
-         bytes_read, filename);
+  fprintf(stderr,
+          "Successfully loaded %zd bytes from '%s' into guest memory.\n",
+          bytes_read, filename);
   close(fd);
 }
 
@@ -324,7 +326,7 @@ int main(int argc, char **argv) {
 
   const char *bin_filename = argv[optind];
 
-  printf("Starting VM with %zu bytes of memory...\n", mem_size);
+  fprintf(stderr, "Starting VM with %zu bytes of memory...\n", mem_size);
 
   struct vm vm;
   struct vcpu vcpu;
