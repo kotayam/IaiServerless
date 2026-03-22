@@ -62,8 +62,8 @@
   fprintf(stderr, "Usage: %s [-m memory_in_MB] <binary_file>\n", bin)
 
 // default memory size 2MB
-#define MB 1024 * 1024
-#define DEFAULT_MEM_SIZE 2 * MB
+#define MB (1024 * 1024)
+#define DEFAULT_MEM_SIZE (2 * MB)
 
 struct vm {
   int sys_fd;
@@ -152,10 +152,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
   }
 }
 
-int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
-  struct kvm_regs regs;
-  uint64_t memval = 0;
-
+int run_vm(struct vcpu *vcpu) {
   for (;;) {
     if (ioctl(vcpu->fd, KVM_RUN, 0) < 0) {
       perror("KVM_RUN");
@@ -164,7 +161,8 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
 
     switch (vcpu->kvm_run->exit_reason) {
     case KVM_EXIT_HLT:
-      goto check;
+      printf("\n[Host] Guest execution completed cleanly.\n");
+      return 0;
 
     case KVM_EXIT_IO:
       if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
@@ -185,26 +183,6 @@ int run_vm(struct vm *vm, struct vcpu *vcpu, size_t sz) {
       exit(1);
     }
   }
-
-check:
-  if (ioctl(vcpu->fd, KVM_GET_REGS, &regs) < 0) {
-    perror("KVM_GET_REGS");
-    exit(1);
-  }
-
-  if (regs.rax != 42) {
-    printf("Wrong result: {E,R,}AX is %lld\n", regs.rax);
-    return 1;
-  }
-
-  memcpy(&memval, &vm->mem[0x400], sz);
-  if (memval != 42) {
-    printf("Wrong result: memory at 0x400 is %lld\n",
-           (unsigned long long)memval);
-    return 1;
-  }
-
-  return 0;
 }
 
 static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
@@ -278,7 +256,7 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
     exit(1);
   }
 
-  return run_vm(vm, vcpu, 8);
+  return run_vm(vcpu);
 }
 
 /**
@@ -350,7 +328,7 @@ int main(int argc, char **argv) {
 
   struct vm vm;
   struct vcpu vcpu;
-  vm_init(&vm, 0x200000);
+  vm_init(&vm, mem_size);
   load_binary(&vm, bin_filename, mem_size);
   vcpu_init(&vm, &vcpu);
 
