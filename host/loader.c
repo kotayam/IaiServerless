@@ -207,8 +207,6 @@ check:
   return 0;
 }
 
-extern const unsigned char guest64[], guest64_end[];
-
 static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
   struct kvm_segment seg = {
       .base = 0,
@@ -282,7 +280,6 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
     exit(1);
   }
 
-  memcpy(vm->mem, guest64, guest64_end - guest64);
   return run_vm(vm, vcpu, 8);
 }
 
