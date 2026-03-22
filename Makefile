@@ -1,25 +1,25 @@
 # IaiServerless Root Makefile
 
-# .PHONY tells Make that these aren't physical files, but commands
-.PHONY: all host shim clean
+.PHONY: all host samples shim clean
 
-# The default target if you just type 'make' at the root
-all: host
+# Default target builds the host loader and the sample binaries
+all: host samples
 
-# Target to build just the host loader
 host:
-	@echo "Building Host Loader..."
+	@echo "=== Building Host Loader ==="
 	$(MAKE) -C host
 
-# Target to build just the shim library (placeholder for now)
+samples:
+	@echo "=== Building Sample Binaries ==="
+	$(MAKE) -C samples
+
 shim:
-	@echo "Building Shim Library..."
+	@echo "=== Building Shim Library ==="
 	# $(MAKE) -C shim
 
-# Clean up build artifacts in all subdirectories
 clean:
-	@echo "Cleaning Host..."
+	@echo "=== Cleaning Host ==="
 	$(MAKE) -C host clean
-	@echo "Cleaning Shim..."
-	# $(MAKE) -C shim clean
+	@echo "=== Cleaning Samples ==="
+	$(MAKE) -C samples clean
 	@echo "All clean!"
