@@ -3,7 +3,7 @@
 .PHONY: all host samples shim clean
 
 # Default target builds the host loader and the sample binaries
-all: host samples
+all: host samples shim
 
 host:
 	@echo "=== Building Host Loader ==="
@@ -22,4 +22,6 @@ clean:
 	$(MAKE) -C host clean
 	@echo "=== Cleaning Samples ==="
 	$(MAKE) -C samples clean
+	@echo "=== Cleaning Shim ==="
+	$(MAKE) -C shim clean
 	@echo "All clean!"
