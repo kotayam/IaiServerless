@@ -9,7 +9,7 @@ CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
 
 # Linker flags
 LDFLAGS_RAW = -Ttext 0x0
-LDFLAGS_SHIM = -Ttext 0x0 -e _start
+LDFLAGS_SHIM = -T $(SHIM_DIR)/link.ld
 
 # Paths to the Shim library
 SHIM_DIR = ../shim

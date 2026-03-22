@@ -1,7 +1,7 @@
 .global _start
 .extern main
 
-.section .text
+.section .text.entry
 _start:
     # Note: Our host_loader (run_long_mode) already sets up a 2MB stack 
     # and sets the 'rsp' register for us. 
