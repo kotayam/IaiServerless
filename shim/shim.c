@@ -7,6 +7,11 @@
 
 static char message_buffer[MESSAGE_BUFFER_SIZE];
 
+// 32-bit hardware port interaction
+static inline void outl(uint16_t port, uint32_t value) {
+  asm volatile("outl %0, %1" : : "a"(value), "Nd"(port) : "memory");
+}
+
 // copy src to dest
 void *memcpy(void *dest, const void *src, size_t n) {
   char *d = dest;
@@ -15,20 +20,6 @@ void *memcpy(void *dest, const void *src, size_t n) {
     *d++ = *s++;
   }
   return dest;
-}
-
-// get length of string
-size_t strlen(const char *s) {
-  size_t len = 0;
-  while (s[len] != '\0') {
-    len++;
-  }
-  return len;
-}
-
-// 32-bit hardware port interaction
-static inline void outl(uint16_t port, uint32_t value) {
-  asm volatile("outl %0, %1" : : "a"(value), "Nd"(port) : "memory");
 }
 
 // intercept write
@@ -44,4 +35,13 @@ long write(int fd, const void *buf, size_t count) {
   outl(SHM_LEN_PORT, count);
 
   return count; // Return the number of bytes successfully written
+}
+
+// get length of string
+size_t strlen(const char *s) {
+  size_t len = 0;
+  while (s[len] != '\0') {
+    len++;
+  }
+  return len;
 }
