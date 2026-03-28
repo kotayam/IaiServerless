@@ -34,15 +34,10 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("../host/host_loader", binPath)
 
 	// capture stdout and stderr from loader
-	var stdoutBuf, stderrBuf bytes.Buffer
+	var stdoutBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
-
-	if stderrBuf.Len() > 0 {
-		// log stderr from host loader
-		log.Printf("[Host Loader -> %s]:\n%s", safeName, stderrBuf.String())
-	}
 
 	if err != nil {
 		// if KVM crashes, return a 500 error with the host loader's output
