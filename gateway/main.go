@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+var runtimeMode string
+
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	// extract function name
 	funcName := strings.TrimPrefix(r.URL.Path, "/")
@@ -22,16 +24,30 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// create path to binary
 	safeName := filepath.Base(funcName)
-	binPath := fmt.Sprintf("../samples/%s.bin", safeName)
 
-	// check if binary exists
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+	// run binary
+	var cmd *exec.Cmd
+	switch runtimeMode {
+	case "kvm":
+		binPath := fmt.Sprintf("../samples/%s.bin", safeName)
+		if _, err := os.Stat(binPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+			return
+		}
+		cmd = exec.Command("../host/host_loader", binPath)
+	case "process":
+		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
+		if _, err := os.Stat(binPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+			return
+		}
+		cmd = exec.Command(binPath)
+	case "docker":
+		// TODO: instantiate docker container
+	default:
+		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
 	}
-
-	// spawn host loader process with binary
-	cmd := exec.Command("../host/host_loader", binPath)
 
 	// capture stdout and stderr from loader
 	var stdoutBuf bytes.Buffer
@@ -51,11 +67,13 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, or docker")
 	portFlag := flag.String("port", "8080", "The port for the gateway to listen on")
 	flag.Parse()
 	port := fmt.Sprintf(":%s", *portFlag)
 
 	http.HandleFunc("/", invokeHandler)
-	fmt.Printf("🚀 IaiServerless Gateway listening on http://localhost%s...\n", port)
+	fmt.Printf("IaiServerless Gateway listening on http://localhost%s...\n", port)
+	fmt.Printf("Active Runtime: %s\n", runtimeMode)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
