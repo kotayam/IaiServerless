@@ -8,3 +8,6 @@ host/host_loader
 
 # gateway
 gateway/gateway
+
+# samples
+samples/*_proc
