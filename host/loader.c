@@ -65,6 +65,11 @@
 #define MB (1024 * 1024)
 #define DEFAULT_MEM_SIZE (2 * MB)
 
+// ports for communication
+#define SINGLE_BYTE_PORT 0xE9
+#define SHM_ADDR_PORT 0x10
+#define SHM_LEN_PORT 0x11
+
 struct vm {
   int sys_fd;
   int fd;
@@ -152,30 +157,44 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
   }
 }
 
-int run_vm(struct vcpu *vcpu) {
+int run_vm(struct vcpu *vcpu, const char *mem) {
+  uint32_t msg_buf_addr = 0;
+  struct kvm_run *run = vcpu->kvm_run;
+
   for (;;) {
     if (ioctl(vcpu->fd, KVM_RUN, 0) < 0) {
       perror("KVM_RUN");
       exit(1);
     }
 
-    switch (vcpu->kvm_run->exit_reason) {
+    switch (run->exit_reason) {
     case KVM_EXIT_HLT:
       fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
       return 0;
 
     case KVM_EXIT_IO:
-      // forward binary I/O write to stdout
-      if (vcpu->kvm_run->io.direction == KVM_EXIT_IO_OUT &&
-          vcpu->kvm_run->io.port == 0xE9) {
-        char *p = (char *)vcpu->kvm_run;
-        fwrite(p + vcpu->kvm_run->io.data_offset, vcpu->kvm_run->io.size, 1,
-               stdout);
-        fflush(stdout);
-        continue;
+      if (run->io.direction == KVM_EXIT_IO_OUT) {
+        if (run->io.port == SINGLE_BYTE_PORT) {
+          // single byte
+          char *p = (char *)run + run->io.data_offset;
+          putchar(*p);
+        } else if (run->io.port == SHM_ADDR_PORT) {
+          // get address of message buffer
+          msg_buf_addr = *(uint32_t *)((char *)run + run->io.data_offset);
+          fprintf(stderr, "[Host] Received message buffer address: %d\n",
+                  msg_buf_addr);
+        } else if (run->io.port == SHM_LEN_PORT) {
+          // get size of message
+          uint32_t length = *(uint32_t *)((char *)run + run->io.data_offset);
+          fprintf(stderr, "[Host] Received message length: %d\n", length);
+          // send it to gateway
+          char *shared_buffer = (char *)mem + msg_buf_addr;
+          fwrite(shared_buffer, 1, length, stdout);
+          fflush(stdout);
+        }
       }
+      continue;
 
-      /* fall through */
     default:
       fprintf(stderr,
               "Got exit_reason %d,"
@@ -257,7 +276,7 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
     exit(1);
   }
 
-  return run_vm(vcpu);
+  return run_vm(vcpu, vm->mem);
 }
 
 /**

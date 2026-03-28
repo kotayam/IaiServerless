@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -55,9 +56,11 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/", invokeHandler)
+	portFlag := flag.String("port", "8080", "The port for the gateway to listen on")
+	flag.Parse()
+	port := fmt.Sprintf(":%s", *portFlag)
 
-	port := ":8080"
+	http.HandleFunc("/", invokeHandler)
 	fmt.Printf("🚀 IaiServerless Gateway listening on http://localhost%s...\n", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
