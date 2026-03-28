@@ -46,9 +46,12 @@ $(SHIM_ELFS): %.elf: %.o
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+proc: prime.c
+	gcc -O2 prime.c -o prime_proc
+
 # Clean up all build artifacts
 clean:
-	rm -f *.o *.elf *.bin
+	rm -f *.o *.elf *.bin prime_proc
 	@echo "Cleaned sample binaries."
 
 .PHONY: all clean
