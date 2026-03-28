@@ -43,7 +43,8 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cmd = exec.Command(binPath)
 	case "docker":
-		// TODO: instantiate docker container
+		containerName := fmt.Sprintf("iai_%s", safeName)
+		cmd = exec.Command("docker", "run", "--rm", containerName)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return

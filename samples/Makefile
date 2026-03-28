@@ -49,6 +49,9 @@ $(SHIM_ELFS): %.elf: %.o
 proc: prime.c
 	gcc -O2 prime.c -o prime_proc
 
+docker: prime.c
+	docker build -t iai_prime .
+
 # Clean up all build artifacts
 clean:
 	rm -f *.o *.elf *.bin prime_proc
