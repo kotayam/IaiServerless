@@ -158,14 +158,15 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
 }
 
 int run_vm(struct vcpu *vcpu, const char *mem) {
+  uint32_t msg_buf_addr = 0;
+  struct kvm_run *run = vcpu->kvm_run;
+
   for (;;) {
     if (ioctl(vcpu->fd, KVM_RUN, 0) < 0) {
       perror("KVM_RUN");
       exit(1);
     }
 
-    struct kvm_run *run = vcpu->kvm_run;
-    uint32_t msg_buf_addr = 0;
     switch (run->exit_reason) {
     case KVM_EXIT_HLT:
       fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
@@ -180,9 +181,12 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
         } else if (run->io.port == SHM_ADDR_PORT) {
           // get address of message buffer
           msg_buf_addr = *(uint32_t *)((char *)run + run->io.data_offset);
+          fprintf(stderr, "[Host] Received message buffer address: %d\n",
+                  msg_buf_addr);
         } else if (run->io.port == SHM_LEN_PORT) {
           // get size of message
           uint32_t length = *(uint32_t *)((char *)run + run->io.data_offset);
+          fprintf(stderr, "[Host] Received message length: %d\n", length);
           // send it to gateway
           char *shared_buffer = (char *)mem + msg_buf_addr;
           fwrite(shared_buffer, 1, length, stdout);
