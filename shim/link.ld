@@ -2,29 +2,35 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* Start the binary at physical address 0x0 */
-    . = 0x0;
+    /* Start the binary at physical address 1MB (0x100000) */
+    . = 0x100000;
 
+    /* --- CODE SEGMENT (Read / Execute) --- */
     .text : {
-        *(.text.entry)  /* Force start.S to the absolute top */
-        *(.text)        /* Standard code */
-        *(.text.*)      /* Catch GCC's .text.startup where main() is hiding! */
+        *(.text.entry)
+        *(.text)
+        *(.text.*)
     }
 
     .rodata : {
-        *(.rodata)      /* Read-only data (like your "Hello World!" string) */
+        *(.rodata)
         *(.rodata.*)
     }
 
+    /* * Push the next section to the next 4KB memory page boundary.
+     * This forces the linker to create a new PT_LOAD segment!
+     */
+    . = ALIGN(0x1000);
+
+    /* --- DATA SEGMENT (Read / Write) --- */
     .data : {
-        *(.data)        /* Initialized variables */
+        *(.data)
     }
 
     .bss : {
-        *(.bss)         /* Uninitialized variables */
+        *(.bss)
     }
     
-    /* Discard complex ELF metadata we don't need for a flat binary */
     /DISCARD/ : {
         *(.eh_frame)
         *(.comment)
