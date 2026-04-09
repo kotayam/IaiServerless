@@ -2,8 +2,8 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* Start the binary at physical address 0x0 */
-    . = 0x0;
+    /* Start the binary at physical address 1MB */
+    . = 0x100000;
 
     .text : {
         *(.text.entry)  /* Force start.S to the absolute top */

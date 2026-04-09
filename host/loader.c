@@ -1,3 +1,4 @@
+#include <elf.h>
 #include <fcntl.h>
 #include <linux/kvm.h>
 #include <stdint.h>
@@ -248,7 +249,7 @@ static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
   setup_64bit_code_segment(sregs);
 }
 
-int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
+int run_long_mode(struct vm *vm, struct vcpu *vcpu, uint64_t entry_point) {
   struct kvm_sregs sregs;
   struct kvm_regs regs;
 
@@ -267,7 +268,8 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
   memset(&regs, 0, sizeof(regs));
   /* Clear all FLAGS bits, except bit 1 which is always set. */
   regs.rflags = 2;
-  regs.rip = 0;
+  // set RIP to the entry point from elf loader
+  regs.rip = entry_point;
   /* Create stack at top of 2 MB page and grow down. */
   regs.rsp = 2 << 20;
 
@@ -280,9 +282,77 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu) {
 }
 
 /**
+ * @brief Parse an ELF binary and load its segments into VM memory.
+ * @return The execution entry point (RIP) defined in the ELF file.
+ */
+uint64_t load_elf(struct vm *vm, const char *filename, size_t max_mem_size) {
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0) {
+    perror("Failed to open ELF file");
+    exit(1);
+  }
+
+  // Read the ELF Header
+  Elf64_Ehdr ehdr;
+  if (read(fd, &ehdr, sizeof(ehdr)) != sizeof(ehdr)) {
+    perror("Failed to read ELF header");
+    exit(1);
+  }
+
+  // Verify it is actually an ELF file
+  if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0) {
+    fprintf(stderr, "Error: File is not a valid ELF binary.\n");
+    exit(1);
+  }
+
+  // Iterate through the Program Headers to find loadable segments
+  Elf64_Phdr phdr;
+  for (int i = 0; i < ehdr.e_phnum; i++) {
+    // Move to the offset of the current program header
+    lseek(fd, ehdr.e_phoff + (i * sizeof(phdr)), SEEK_SET);
+    read(fd, &phdr, sizeof(phdr));
+
+    // We only care about PT_LOAD segments (actual code/data to map to RAM)
+    if (phdr.p_type == PT_LOAD) {
+      if (phdr.p_paddr + phdr.p_memsz > max_mem_size) {
+        fprintf(stderr, "Error: ELF segment exceeds VM memory size.\n");
+        exit(1);
+      }
+
+      // Move to where the actual segment data is located in the file
+      lseek(fd, phdr.p_offset, SEEK_SET);
+
+      // Copy the data into the VM's physical memory space
+      if (phdr.p_filesz > 0) {
+        read(fd, vm->mem + phdr.p_paddr, phdr.p_filesz);
+      }
+
+      // Zero out the BSS section (uninitialized variables)
+      // If the memory size is larger than the file size, the remainder must be
+      // zeros
+      if (phdr.p_memsz > phdr.p_filesz) {
+        memset(vm->mem + phdr.p_paddr + phdr.p_filesz, 0,
+               phdr.p_memsz - phdr.p_filesz);
+      }
+
+      fprintf(stderr,
+              "[ELF Loader] Loaded segment at 0x%lx (Size: %ld bytes)\n",
+              (unsigned long)phdr.p_paddr, (long)phdr.p_memsz);
+    }
+  }
+
+  close(fd);
+  fprintf(stderr, "Successfully loaded ELF. Entry point: 0x%lx\n",
+          (unsigned long)ehdr.e_entry);
+
+  return ehdr.e_entry; // We need this to set the CPU registers!
+}
+
+/**
  * @brief Load binary to run in the VM.
  */
-void load_binary(struct vm *vm, const char *filename, size_t max_mem_size) {
+void load_flat_binary(struct vm *vm, const char *filename,
+                      size_t max_mem_size) {
   int fd = open(filename, O_RDONLY);
   if (fd < 0) {
     perror("Failed to open binary file");
@@ -350,9 +420,10 @@ int main(int argc, char **argv) {
   struct vm vm;
   struct vcpu vcpu;
   vm_init(&vm, mem_size);
-  load_binary(&vm, bin_filename, mem_size);
+  // load_flat_binary(&vm, bin_filename, mem_size);
+  uint64_t entry_point = load_elf(&vm, bin_filename, mem_size);
   vcpu_init(&vm, &vcpu);
 
   // run the VM
-  return run_long_mode(&vm, &vcpu);
+  return run_long_mode(&vm, &vcpu, entry_point);
 }
