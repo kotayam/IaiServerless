@@ -47,6 +47,7 @@
 #define EFER_SCE 1
 #define EFER_LME (1U << 8)
 #define EFER_LMA (1U << 10)
+// No-Execute switch
 #define EFER_NXE (1U << 11)
 
 /* 64-bit page * entry bits */
@@ -57,6 +58,8 @@
 #define PDE64_DIRTY (1U << 6)
 #define PDE64_PS (1U << 7)
 #define PDE64_G (1U << 8)
+// 4KB page No-Execute lock
+#define PTE64_NX (1ULL << 63)
 
 // usage message
 #define USAGE(bin)                                                             \
@@ -65,6 +68,13 @@
 // default memory size 2MB
 #define MB (1024 * 1024)
 #define DEFAULT_MEM_SIZE (2 * MB)
+
+// page size 4KB
+#define PAGE_SIZE 4096
+// root page table physical address
+#define PML4_ADDR 0x1000
+// entry point for elf binary
+#define ELF_ENTRY_POINT 0x100000
 
 // ports for communication
 #define SINGLE_BYTE_PORT 0xE9
@@ -75,11 +85,19 @@ struct vm {
   int sys_fd;
   int fd;
   char *mem;
+  size_t mem_size;
+  // root page table physical address
+  uint64_t pml4_addr;
 };
 
+/**
+ * @brief Initialize virtual memory.
+ */
 void vm_init(struct vm *vm, size_t mem_size) {
   int api_ver;
   struct kvm_userspace_memory_region memreg;
+
+  vm->mem_size = mem_size;
 
   vm->sys_fd = open("/dev/kvm", O_RDWR);
   if (vm->sys_fd < 0) {
@@ -130,11 +148,89 @@ void vm_init(struct vm *vm, size_t mem_size) {
   }
 }
 
+uint64_t next_free_table_addr = PML4_ADDR;
+
+/**
+ * @brief Allocate a new table which is size of page.
+ */
+uint64_t allocate_table_page(struct vm *vm) {
+  uint64_t addr = next_free_table_addr;
+  next_free_table_addr += PAGE_SIZE;
+  if (next_free_table_addr >= ELF_ENTRY_POINT) {
+    fprintf(stderr,
+            "Fatal: Page tables grew too large and hit ELF entry point\n");
+    exit(1);
+  }
+
+  // zero out the new table
+  memset(vm->mem + addr, 0, PAGE_SIZE);
+  return addr;
+}
+
+/**
+ * @brief Map a new 4K page for the physical address. Implement W^X hardware
+ * security.
+ */
+void map_4k_page(struct vm *vm, uint64_t phys_addr, int writeable,
+                 int executable) {
+  // get physical address of page table root
+  uint64_t *pml4 = (uint64_t *)(vm->mem + vm->pml4_addr);
+
+  // extract index from physical address
+  int pml4_idx = (phys_addr >> 39) & 0x1FF;
+  int pdpt_idx = (phys_addr >> 30) & 0x1FF;
+  int pd_idx = (phys_addr >> 21) & 0x1FF;
+  int pt_idx = (phys_addr >> 12) & 0x1FF;
+
+  if (!(pml4[pml4_idx] & PDE64_PRESENT)) {
+    // add new entry to pml4
+    pml4[pml4_idx] =
+        allocate_table_page(vm) | PDE64_PRESENT | PDE64_RW | PDE64_USER;
+  }
+
+  uint64_t *pdpt = (uint64_t *)(vm->mem + (pml4[pml4_idx] & ~0xFFFULL));
+  if (!(pdpt[pdpt_idx] & PDE64_PRESENT)) {
+    // add new entry to pdpt
+    pdpt[pdpt_idx] =
+        allocate_table_page(vm) | PDE64_PRESENT | PDE64_RW | PDE64_USER;
+  }
+
+  uint64_t *pd = (uint64_t *)(vm->mem + (pdpt[pdpt_idx] & ~0xFFFULL));
+  if (!(pd[pd_idx] & PDE64_PRESENT)) {
+    // add new entry to pd
+    pd[pd_idx] =
+        allocate_table_page(vm) | PDE64_PRESENT | PDE64_RW | PDE64_USER;
+  }
+
+  uint64_t *pt = (uint64_t *)(vm->mem + (pd[pd_idx] & ~0xFFFULL));
+  // construct the final entry with granular permissions
+  uint64_t entry = phys_addr | PDE64_PRESENT | PDE64_USER;
+  if (writeable)
+    entry |= PDE64_RW;
+  if (!executable)
+    entry |= PTE64_NX;
+
+  // commit to the hardware page table
+  pt[pt_idx] = entry;
+}
+
+void init_page_tables(struct vm *vm) {
+  // allocate root page table
+  vm->pml4_addr = allocate_table_page(vm);
+  // map all virtual memory as writable but not executable
+  for (uint64_t addr = 0; addr < vm->mem_size; addr += PAGE_SIZE) {
+    map_4k_page(vm, addr, 1, 0);
+  }
+}
+
 struct vcpu {
   int fd;
   struct kvm_run *kvm_run;
 };
 
+/**
+ * @brief Initialize virtual CPU.
+ */
 void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
   int vcpu_mmap_size;
 
@@ -158,6 +254,9 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
   }
 }
 
+/**
+ * @brief Run the virtual machine.
+ */
 int run_vm(struct vcpu *vcpu, const char *mem) {
   uint32_t msg_buf_addr = 0;
   struct kvm_run *run = vcpu->kvm_run;
@@ -182,7 +281,7 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
         } else if (run->io.port == SHM_ADDR_PORT) {
           // get address of message buffer
           msg_buf_addr = *(uint32_t *)((char *)run + run->io.data_offset);
-          fprintf(stderr, "[Host] Received message buffer address: %d\n",
+          fprintf(stderr, "[Host] Received message buffer address: 0x%x\n",
                   msg_buf_addr);
         } else if (run->io.port == SHM_LEN_PORT) {
           // get size of message
@@ -206,6 +305,9 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
   }
 }
 
+/**
+ * @brief Setup code segment register.
+ */
 static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
   struct kvm_segment seg = {
       .base = 0,
@@ -227,28 +329,22 @@ static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
   sregs->ds = sregs->es = sregs->fs = sregs->gs = sregs->ss = seg;
 }
 
+/**
+ * @brief Setup special registers for long mode.
+ */
 static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
-  uint64_t pml4_addr = 0x2000;
-  uint64_t *pml4 = (void *)(vm->mem + pml4_addr);
-
-  uint64_t pdpt_addr = 0x3000;
-  uint64_t *pdpt = (void *)(vm->mem + pdpt_addr);
-
-  uint64_t pd_addr = 0x4000;
-  uint64_t *pd = (void *)(vm->mem + pd_addr);
-
-  pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pdpt_addr;
-  pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pd_addr;
-  pd[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | PDE64_PS;
-
-  sregs->cr3 = pml4_addr;
+  sregs->cr3 = vm->pml4_addr;
   sregs->cr4 = CR4_PAE;
   sregs->cr0 = CR0_PE | CR0_MP | CR0_ET | CR0_NE | CR0_WP | CR0_AM | CR0_PG;
-  sregs->efer = EFER_LME | EFER_LMA;
+  // activate NXE
+  sregs->efer = EFER_LME | EFER_LMA | EFER_NXE;
 
   setup_64bit_code_segment(sregs);
 }
 
+/**
+ * @brief Run VM in long mode.
+ */
 int run_long_mode(struct vm *vm, struct vcpu *vcpu, uint64_t entry_point) {
   struct kvm_sregs sregs;
   struct kvm_regs regs;
@@ -270,8 +366,8 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu, uint64_t entry_point) {
   regs.rflags = 2;
   // set RIP to the entry point from elf loader
   regs.rip = entry_point;
-  /* Create stack at top of 2 MB page and grow down. */
-  regs.rsp = 2 << 20;
+  // create stack at top of reserved memory
+  regs.rsp = vm->mem_size;
 
   if (ioctl(vcpu->fd, KVM_SET_REGS, &regs) < 0) {
     perror("KVM_SET_REGS");
@@ -285,7 +381,7 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu, uint64_t entry_point) {
  * @brief Parse an ELF binary and load its segments into VM memory.
  * @return The execution entry point (RIP) defined in the ELF file.
  */
-uint64_t load_elf(struct vm *vm, const char *filename, size_t max_mem_size) {
+uint64_t load_elf(struct vm *vm, const char *filename) {
   int fd = open(filename, O_RDONLY);
   if (fd < 0) {
     perror("Failed to open ELF file");
@@ -314,7 +410,7 @@ uint64_t load_elf(struct vm *vm, const char *filename, size_t max_mem_size) {
 
     // We only care about PT_LOAD segments (actual code/data to map to RAM)
     if (phdr.p_type == PT_LOAD) {
-      if (phdr.p_paddr + phdr.p_memsz > max_mem_size) {
+      if (phdr.p_paddr + phdr.p_memsz > vm->mem_size) {
         fprintf(stderr, "Error: ELF segment exceeds VM memory size.\n");
         exit(1);
       }
@@ -335,17 +431,27 @@ uint64_t load_elf(struct vm *vm, const char *filename, size_t max_mem_size) {
                phdr.p_memsz - phdr.p_filesz);
       }
 
+      // read ELF flags to implement W^X security
+      int is_writeable = (phdr.p_flags & PF_W) != 0;
+      int is_executable = (phdr.p_flags & PF_X) != 0;
+
+      // ensure we hit exact 4KB page boundaries when locking down the segment
+      uint64_t start_page = phdr.p_paddr & ~0xFFFULL;
+      uint64_t end_page = (phdr.p_paddr + phdr.p_memsz + 0xFFF) & ~0xFFFULL;
+      // update the permissions for the pages in this segment
+      for (uint64_t addr = start_page; addr < end_page; addr += PAGE_SIZE) {
+        map_4k_page(vm, addr, is_writeable, is_executable);
+      }
+
       fprintf(stderr,
-              "[ELF Loader] Loaded segment at 0x%lx (Size: %ld bytes)\n",
-              (unsigned long)phdr.p_paddr, (long)phdr.p_memsz);
+              "[ELF Loader] Segment loaded at 0x%lx | Size: %ld | W=%d X=%d\n",
+              (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
+              is_executable);
     }
   }
 
   close(fd);
-  fprintf(stderr, "Successfully loaded ELF. Entry point: 0x%lx\n",
-          (unsigned long)ehdr.e_entry);
-
-  return ehdr.e_entry; // We need this to set the CPU registers!
+  return ehdr.e_entry;
 }
 
 /**
@@ -419,9 +525,15 @@ int main(int argc, char **argv) {
 
   struct vm vm;
   struct vcpu vcpu;
+
   vm_init(&vm, mem_size);
-  // load_flat_binary(&vm, bin_filename, mem_size);
-  uint64_t entry_point = load_elf(&vm, bin_filename, mem_size);
+  // initialize page tables
+  init_page_tables(&vm);
+
+  // load ELF binary
+  uint64_t entry_point = load_elf(&vm, bin_filename);
+
+  // initialize VCPU
   vcpu_init(&vm, &vcpu);
 
   // run the VM
