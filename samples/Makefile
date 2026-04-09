@@ -26,12 +26,15 @@ SHIM_ELFS = $(SHIM_SRCS:.c=.elf)
 BINS = $(RAW_SRCS:.c=.bin) $(SHIM_SRCS:.c=.bin)
 
 # Default target: build all flat binaries
-all: $(BINS)
+all: $(RAW_ELFS) $(SHIM_ELFS)
+
+# Optional target: build all flat binaries (must be explicitly invoked)
+bins: $(BINS)
 
 # Step 3: Strip the ELF headers to create the raw flat binaries (applies to both)
 %.bin: %.elf
 	$(OBJCOPY) -O binary $< $@
-	@echo "--> Successfully generated Unikernel binary: $@"
+	@echo "--> Successfully generated flat binary: $@"
 
 # Step 2A: Link RAW binaries (No Shim)
 # This uses Static Pattern Rules to only apply to files starting with 'raw_'
@@ -57,4 +60,4 @@ clean:
 	rm -f *.o *.elf *.bin prime_proc
 	@echo "Cleaned sample binaries."
 
-.PHONY: all clean
+.PHONY: all bins clean proc docker
