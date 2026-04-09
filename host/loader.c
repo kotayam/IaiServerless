@@ -21,6 +21,7 @@
 #define CR0_AM (1U << 18)
 #define CR0_NW (1U << 29)
 #define CR0_CD (1U << 30)
+// enable paging
 #define CR0_PG (1U << 31)
 
 /* CR4 bits */
@@ -335,6 +336,7 @@ static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
 static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
   sregs->cr3 = vm->pml4_addr;
   sregs->cr4 = CR4_PAE;
+  // enable paging
   sregs->cr0 = CR0_PE | CR0_MP | CR0_ET | CR0_NE | CR0_WP | CR0_AM | CR0_PG;
   // activate NXE
   sregs->efer = EFER_LME | EFER_LMA | EFER_NXE;
