@@ -32,7 +32,7 @@ def main():
         print("Please start it first: cd gateway && go run main.go -runtime=kvm")
         sys.exit(1)
 
-    endpoints = ["hello", "prime", "net_query"]
+    endpoints = ["hello", "prime", "net_query", "weather"]
     if len(sys.argv) > 1:
         endpoints = sys.argv[1:]
 
