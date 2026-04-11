@@ -29,7 +29,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	var cmd *exec.Cmd
 	switch runtimeMode {
 	case "kvm":
-		binPath := fmt.Sprintf("../samples/%s.bin", safeName)
+		binPath := fmt.Sprintf("../samples/%s.elf", safeName)
 		if _, err := os.Stat(binPath); os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
 			return
@@ -51,14 +51,16 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// capture stdout and stderr from loader
-	var stdoutBuf bytes.Buffer
+	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = &stderrBuf
 	err := cmd.Run()
 
 	if err != nil {
-		// if KVM crashes, return a 500 error with the host loader's output
-		http.Error(w, fmt.Sprintf("VM execution failed: %v", err), http.StatusInternalServerError)
+		// if host loader returns non-zero, it means the guest function failed
+		w.WriteHeader(http.StatusInternalServerError)
+		// return both the output and the error message to the client
+		w.Write([]byte(fmt.Sprintf("MicroVM Execution Failed:\n%s\n%s", stdoutBuf.String(), stderrBuf.String())))
 		return
 	}
 
