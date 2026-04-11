@@ -83,15 +83,15 @@ int main() {
     /* 3. Send HTTP Request */
     send(sockfd, msg, strlen(msg), 0);
 
-    /* 4. Receive Response */
-    long n = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-    if (n > 0) {
-        buffer[n] = '\0';
-        write(1, "Received from host:\n", 20);
+    /* 4. Receive Response in a loop */
+    write(1, "Received from host:\n", 20);
+    long n;
+    while ((n = recv(sockfd, buffer, sizeof(buffer), 0)) > 0) {
         write(1, buffer, (size_t)n);
-        write(1, "\n", 1);
-    } else {
-        const char *err = "Failed to receive data\n";
+    }
+
+    if (n < 0) {
+        const char *err = "\nError receiving data\n";
         write(1, err, strlen(err));
     }
 
