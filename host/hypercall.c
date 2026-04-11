@@ -2,6 +2,7 @@
 #include "../iai_common.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,6 +116,20 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             guest_to_host_fds[req->args[0]] = -1;
         }
         IAI_LOG("CLOSE", "guest_fd=%-2d -> ret=%-2d err=%d", req->args[0], req->ret, req->err);
+        break;
+    }
+    case IAI_GETHOSTBYNAME: {
+        struct hostent *he = gethostbyname((char *)payload);
+        if (!he) {
+            req->ret = -1;
+            req->err = h_errno;
+        } else {
+            /* Copy the first IPv4 address (4 bytes) back to guest buffer */
+            memcpy(payload, he->h_addr_list[0], 4);
+            req->ret = 0;
+            req->err = 0;
+        }
+        IAI_LOG("GETHOST", "hostname=%s -> ret=%d", (char *)payload, req->ret);
         break;
     }
     default:

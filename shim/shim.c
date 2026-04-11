@@ -11,6 +11,15 @@ static inline void outl(uint16_t port, uint32_t value) {
   asm volatile("outl %0, %1" : : "a"(value), "Nd"(port) : "memory");
 }
 
+// get length of string
+size_t strlen(const char *s) {
+  size_t len = 0;
+  while (s[len] != '\0') {
+    len++;
+  }
+  return len;
+}
+
 // copy src to dest
 void *memcpy(void *dest, const void *src, size_t n) {
   char *d = dest;
@@ -83,11 +92,10 @@ int close(int fd) {
     return (int)hypercall(IAI_CLOSE, (uint32_t)fd, 0, 0, 0, NULL, 0);
 }
 
-// get length of string
-size_t strlen(const char *s) {
-  size_t len = 0;
-  while (s[len] != '\0') {
-    len++;
-  }
-  return len;
+int gethostbyname_r(const char *name, uint32_t *addr) {
+    long ret = hypercall(IAI_GETHOSTBYNAME, 0, 0, 0, 0, name, (uint32_t)strlen(name) + 1);
+    if (ret == 0) {
+        memcpy(addr, message_buffer + sizeof(struct iai_req), 4);
+    }
+    return (int)ret;
 }

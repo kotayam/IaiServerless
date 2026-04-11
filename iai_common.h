@@ -19,6 +19,7 @@ enum iai_op {
     IAI_SEND,
     IAI_RECV,
     IAI_CLOSE,
+    IAI_GETHOSTBYNAME,
 };
 
 /* Request Header for Proxy Syscalls */
