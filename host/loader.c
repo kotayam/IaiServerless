@@ -84,6 +84,9 @@
 
 int iai_debug = 0;
 
+#define IAI_LOG(op, fmt, ...) \
+    do { if (iai_debug) fprintf(stderr, "[HOST ] %-8s " fmt "\n", op, ##__VA_ARGS__); } while (0)
+
 struct vm {
   int sys_fd;
   int fd;
@@ -272,9 +275,7 @@ int run_vm(struct vcpu *vcpu, char *mem) {
 
     switch (run->exit_reason) {
     case KVM_EXIT_HLT:
-      if (iai_debug) {
-        fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
-      }
+      IAI_LOG("EXIT", "Guest execution completed cleanly.");
       return 0;
 
     case KVM_EXIT_IO:
@@ -451,8 +452,7 @@ uint64_t load_elf(struct vm *vm, const char *filename) {
       }
 
       if (iai_debug) {
-        fprintf(stderr,
-                "[ELF Loader] Segment loaded at 0x%lx | Size: %ld | W=%d X=%d\n",
+        IAI_LOG("SEGMENT", "at=0x%-8lx size=%-6ld W=%d X=%d",
                 (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
                 is_executable);
       }
@@ -535,9 +535,7 @@ int main(int argc, char **argv) {
 
   const char *bin_filename = argv[optind];
 
-  if (iai_debug) {
-    fprintf(stderr, "Starting VM with %zu bytes of memory...\n", mem_size);
-  }
+  IAI_LOG("STARTUP", "Starting VM with %zu bytes of memory...", mem_size);
 
   struct vm vm;
   struct vcpu vcpu;
