@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "hypercall.h"
+#include "../iai_common.h"
 
 /* CR0 bits */
 #define CR0_PE 1u
@@ -34,7 +36,7 @@
 #define CR4_MCE (1U << 6)
 #define CR4_PGE (1U << 7)
 #define CR4_PCE (1U << 8)
-#define CR4_OSFXSR (1U << 8)
+#define CR4_OSFXSR (1U << 9)
 #define CR4_OSXMMEXCPT (1U << 10)
 #define CR4_UMIP (1U << 11)
 #define CR4_VMXE (1U << 13)
@@ -79,8 +81,6 @@
 
 // ports for communication
 #define SINGLE_BYTE_PORT 0xE9
-#define SHM_ADDR_PORT 0x10
-#define SHM_LEN_PORT 0x11
 
 struct vm {
   int sys_fd;
@@ -258,7 +258,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
 /**
  * @brief Run the virtual machine.
  */
-int run_vm(struct vcpu *vcpu, const char *mem) {
+int run_vm(struct vcpu *vcpu, char *mem) {
   uint32_t msg_buf_addr = 0;
   struct kvm_run *run = vcpu->kvm_run;
 
@@ -282,13 +282,11 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
         } else if (run->io.port == SHM_ADDR_PORT) {
           // get address of message buffer
           msg_buf_addr = *(uint32_t *)((char *)run + run->io.data_offset);
-          fprintf(stderr, "[Host] Received message buffer address: 0x%x\n",
-                  msg_buf_addr);
+        } else if (run->io.port == HYPERCALL_PORT) {
+          handle_hypercall(mem, msg_buf_addr);
         } else if (run->io.port == SHM_LEN_PORT) {
-          // get size of message
+          // Backward compatibility for old write
           uint32_t length = *(uint32_t *)((char *)run + run->io.data_offset);
-          fprintf(stderr, "[Host] Received message length: %d\n", length);
-          // send it to gateway
           char *shared_buffer = (char *)mem + msg_buf_addr;
           fwrite(shared_buffer, 1, length, stdout);
           fflush(stdout);
@@ -335,7 +333,10 @@ static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
  */
 static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
   sregs->cr3 = vm->pml4_addr;
-  sregs->cr4 = CR4_PAE;
+  // CR4_PAE is required for long mode.
+  // CR4_OSFXSR and CR4_OSXMMEXCPT enable SSE (XMM registers).
+  // GCC often generates these instructions for optimizations at -O2.
+  sregs->cr4 = CR4_PAE | CR4_OSFXSR | CR4_OSXMMEXCPT;
   // enable paging
   sregs->cr0 = CR0_PE | CR0_MP | CR0_ET | CR0_NE | CR0_WP | CR0_AM | CR0_PG;
   // activate NXE
@@ -499,6 +500,8 @@ void load_flat_binary(struct vm *vm, const char *filename,
 int main(int argc, char **argv) {
   size_t mem_size = DEFAULT_MEM_SIZE;
   int opt;
+
+  init_fd_map();
 
   while ((opt = getopt(argc, argv, "m:")) != -1) {
     switch (opt) {
