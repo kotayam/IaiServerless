@@ -274,9 +274,18 @@ int run_vm(struct vcpu *vcpu, char *mem) {
     }
 
     switch (run->exit_reason) {
-    case KVM_EXIT_HLT:
-      IAI_LOG("EXIT", "Guest execution completed cleanly.");
-      return 0;
+    case KVM_EXIT_HLT: {
+      /* Upon HLT, the guest has finished its main(). 
+       * We capture the 'rax' register which contains the return code 
+       * and use it as the host loader's own exit code. */
+      struct kvm_regs regs;
+      if (ioctl(vcpu->fd, KVM_GET_REGS, &regs) < 0) {
+        perror("KVM_GET_REGS");
+        return 1;
+      }
+      IAI_LOG("EXIT", "Guest execution completed with code %lld.", (long long)regs.rax);
+      return (int)regs.rax;
+    }
 
     case KVM_EXIT_IO:
       if (run->io.direction == KVM_EXIT_IO_OUT) {
