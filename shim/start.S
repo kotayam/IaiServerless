@@ -3,9 +3,11 @@
 
 .section .text.entry
 _start:
-    # Note: Our host_loader (run_long_mode) already sets up a 2MB stack 
-    # and sets the 'rsp' register for us. 
-    
+    # Mark the end of the stack frame chain
+    xor %rbp, %rbp
+    # Align the stack pointer to a 16-byte boundary
+    and $-16, %rsp
+
     # Call the user's main function
     call main
 
