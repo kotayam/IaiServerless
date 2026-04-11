@@ -8,6 +8,9 @@
 #define SHM_LEN_PORT 0x11
 #define HYPERCALL_PORT 0x12
 
+/* Global debug flag (used in Host Loader) */
+extern int iai_debug;
+
 /* Operation IDs */
 enum iai_op {
     IAI_WRITE = 1,

@@ -12,6 +12,9 @@
 #define MAX_GUEST_FDS 1024
 static int guest_to_host_fds[MAX_GUEST_FDS];
 
+#define IAI_LOG(fmt, ...) \
+    do { if (iai_debug) fprintf(stderr, "[Hypercall] " fmt "\n", ##__VA_ARGS__); } while (0)
+
 void init_fd_map() {
     for (int i = 0; i < MAX_GUEST_FDS; i++) {
         guest_to_host_fds[i] = -1;
@@ -36,6 +39,7 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->ret = write(fd, payload, req->data_len);
             req->err = errno;
         }
+        IAI_LOG("WRITE(guest_fd=%d, len=%u) -> ret=%d, err=%d", req->args[0], req->data_len, req->ret, req->err);
         break;
     }
     case IAI_SOCKET: {
@@ -61,6 +65,7 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
                 req->err = 0;
             }
         }
+        IAI_LOG("SOCKET(domain=%d, type=%d, proto=%d) -> guest_fd=%d, err=%d", req->args[0], req->args[1], req->args[2], req->ret, req->err);
         break;
     }
     case IAI_CONNECT: {
@@ -72,6 +77,7 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->ret = connect(fd, (struct sockaddr *)payload, req->data_len);
             req->err = errno;
         }
+        IAI_LOG("CONNECT(guest_fd=%d, addrlen=%u) -> ret=%d, err=%d", req->args[0], req->data_len, req->ret, req->err);
         break;
     }
     case IAI_SEND: {
@@ -83,6 +89,7 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->ret = send(fd, payload, req->data_len, req->args[1]);
             req->err = errno;
         }
+        IAI_LOG("SEND(guest_fd=%d, len=%u, flags=%d) -> ret=%d, err=%d", req->args[0], req->data_len, req->args[1], req->ret, req->err);
         break;
     }
     case IAI_RECV: {
@@ -94,6 +101,7 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->ret = recv(fd, payload, req->args[1], req->args[2]);
             req->err = errno;
         }
+        IAI_LOG("RECV(guest_fd=%d, maxlen=%u, flags=%d) -> ret=%d, err=%d", req->args[0], req->args[1], req->args[2], req->ret, req->err);
         break;
     }
     case IAI_CLOSE: {
@@ -106,11 +114,13 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->err = errno;
             guest_to_host_fds[req->args[0]] = -1;
         }
+        IAI_LOG("CLOSE(guest_fd=%d) -> ret=%d, err=%d", req->args[0], req->ret, req->err);
         break;
     }
     default:
         req->ret = -1;
         req->err = ENOSYS;
+        IAI_LOG("UNKNOWN(op=%u)", req->op);
         break;
     }
 }

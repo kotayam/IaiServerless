@@ -66,7 +66,7 @@
 
 // usage message
 #define USAGE(bin)                                                             \
-  fprintf(stderr, "Usage: %s [-m memory_in_MB] <binary_file>\n", bin)
+  fprintf(stderr, "Usage: %s [-m memory_in_MB] [-v] <binary_file>\n", bin)
 
 // default memory size 2MB
 #define MB (1024 * 1024)
@@ -81,6 +81,8 @@
 
 // ports for communication
 #define SINGLE_BYTE_PORT 0xE9
+
+int iai_debug = 0;
 
 struct vm {
   int sys_fd;
@@ -270,7 +272,9 @@ int run_vm(struct vcpu *vcpu, char *mem) {
 
     switch (run->exit_reason) {
     case KVM_EXIT_HLT:
-      fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
+      if (iai_debug) {
+        fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
+      }
       return 0;
 
     case KVM_EXIT_IO:
@@ -446,10 +450,12 @@ uint64_t load_elf(struct vm *vm, const char *filename) {
         map_4k_page(vm, addr, is_writeable, is_executable);
       }
 
-      fprintf(stderr,
-              "[ELF Loader] Segment loaded at 0x%lx | Size: %ld | W=%d X=%d\n",
-              (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
-              is_executable);
+      if (iai_debug) {
+        fprintf(stderr,
+                "[ELF Loader] Segment loaded at 0x%lx | Size: %ld | W=%d X=%d\n",
+                (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
+                is_executable);
+      }
     }
   }
 
@@ -503,7 +509,7 @@ int main(int argc, char **argv) {
 
   init_fd_map();
 
-  while ((opt = getopt(argc, argv, "m:")) != -1) {
+  while ((opt = getopt(argc, argv, "m:v")) != -1) {
     switch (opt) {
     case 'm':
       mem_size = (size_t)strtoull(optarg, NULL, 10) * MB;
@@ -511,6 +517,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: Invalid memory size.\n");
         return 1;
       }
+      break;
+    case 'v':
+      iai_debug = 1;
       break;
     default:
       USAGE(argv[0]);
@@ -526,7 +535,9 @@ int main(int argc, char **argv) {
 
   const char *bin_filename = argv[optind];
 
-  fprintf(stderr, "Starting VM with %zu bytes of memory...\n", mem_size);
+  if (iai_debug) {
+    fprintf(stderr, "Starting VM with %zu bytes of memory...\n", mem_size);
+  }
 
   struct vm vm;
   struct vcpu vcpu;
