@@ -18,7 +18,7 @@ SHIM_LIB = $(SHIM_DIR)/libshim.a
 
 # 1. Separate the C files into 'bare' and 'shim' categories
 RAW_SRCS = $(wildcard bare_*.c)
-SHIM_SRCS = $(filter-out $(RAW_SRCS) iai.c, $(wildcard *.c))
+SHIM_SRCS = $(filter-out $(RAW_SRCS) iai.c timing.c, $(wildcard *.c))
 
 # 2. Define the expected outputs
 RAW_ELFS = $(RAW_SRCS:.c=.elf)
@@ -59,8 +59,8 @@ $(SHIM_ELFS): %.elf: %.o $(SHIM_START) $(SHIM_LIB)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Native process build (uses standard libc)
-%_proc: %.c
-	$(CC) -O2 $< -o $@
+%_proc: %.c timing.c
+	$(CC) -O2 $< timing.c -o $@
 
 # Clean up all build artifacts
 clean:

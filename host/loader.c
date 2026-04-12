@@ -1,3 +1,5 @@
+#include "../iai_common.h"
+#include "hypercall.h"
 #include <elf.h>
 #include <fcntl.h>
 #include <linux/kvm.h>
@@ -8,9 +10,8 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
-#include "hypercall.h"
-#include "../iai_common.h"
 
 /* CR0 bits */
 #define CR0_PE 1u
@@ -84,8 +85,17 @@
 
 int iai_debug = 0;
 
-#define IAI_LOG(op, fmt, ...) \
-    do { if (iai_debug) fprintf(stderr, "[HOST ] %-8s " fmt "\n", op, ##__VA_ARGS__); } while (0)
+static inline double ms_since(struct timespec *t0) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (now.tv_sec - t0->tv_sec) * 1e3 + (now.tv_nsec - t0->tv_nsec) / 1e6;
+}
+
+#define IAI_LOG(op, fmt, ...)                                                  \
+  do {                                                                         \
+    if (iai_debug)                                                             \
+      fprintf(stderr, "[HOST ] %-8s " fmt "\n", op, ##__VA_ARGS__);            \
+  } while (0)
 
 struct vm {
   int sys_fd;
@@ -275,15 +285,16 @@ int run_vm(struct vcpu *vcpu, char *mem) {
 
     switch (run->exit_reason) {
     case KVM_EXIT_HLT: {
-      /* Upon HLT, the guest has finished its main(). 
-       * We capture the 'rax' register which contains the return code 
+      /* Upon HLT, the guest has finished its main().
+       * We capture the 'rax' register which contains the return code
        * and use it as the host loader's own exit code. */
       struct kvm_regs regs;
       if (ioctl(vcpu->fd, KVM_GET_REGS, &regs) < 0) {
         perror("KVM_GET_REGS");
         return 1;
       }
-      IAI_LOG("EXIT", "Guest execution completed with code %lld.", (long long)regs.rax);
+      IAI_LOG("EXIT", "Guest execution completed with code %lld.",
+              (long long)regs.rax);
       return (int)regs.rax;
     }
 
@@ -550,15 +561,16 @@ int main(int argc, char **argv) {
   struct vcpu vcpu;
 
   vm_init(&vm, mem_size);
-  // initialize page tables
   init_page_tables(&vm);
-
-  // load ELF binary
   uint64_t entry_point = load_elf(&vm, bin_filename);
-
-  // initialize VCPU
   vcpu_init(&vm, &vcpu);
 
-  // run the VM
-  return run_long_mode(&vm, &vcpu, entry_point);
+  struct timespec t_exec;
+  clock_gettime(CLOCK_MONOTONIC, &t_exec);
+
+  int ret = run_long_mode(&vm, &vcpu, entry_point);
+
+  fprintf(stderr, "X-Exec-Time: %.4f\n", ms_since(&t_exec));
+
+  return ret;
 }

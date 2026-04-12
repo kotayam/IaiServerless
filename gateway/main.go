@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,7 +18,7 @@ var runtimeMode string
 
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	t0 := time.Now()
-	
+
 	// extract function name
 	funcName := strings.TrimPrefix(r.URL.Path, "/")
 	if funcName == "" {
@@ -57,15 +58,34 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
-	
+
 	t1 := time.Now()
 	err := cmd.Run()
 	t2 := time.Now()
+	e2e := float64(time.Since(t0).Nanoseconds()) / 1e6
 
-	// Calculate timing metrics in milliseconds (float64)
 	coldStart := float64(t1.Sub(t0).Nanoseconds()) / 1e6
 	execTime := float64(t2.Sub(t1).Nanoseconds()) / 1e6
-	e2e := float64(time.Since(t0).Nanoseconds()) / 1e6
+
+	// For KVM, parse precise timings emitted by host_loader on stderr.
+	// For process/docker, timing.c emits X-Exec-Time (CLOCK_MONOTONIC delta)
+	// and cold start is derived as: cold_start = e2e - exec_time.
+	switch runtimeMode {
+	case "kvm":
+		for _, line := range strings.Split(stderrBuf.String(), "\n") {
+			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
+				execTime, _ = strconv.ParseFloat(val, 64)
+				coldStart = e2e - execTime
+			}
+		}
+	case "process", "docker":
+		for _, line := range strings.Split(stderrBuf.String(), "\n") {
+			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
+				execTime, _ = strconv.ParseFloat(val, 64)
+				coldStart = e2e - execTime
+			}
+		}
+	}
 
 	// Set timing headers
 	w.Header().Set("X-Cold-Start", fmt.Sprintf("%.4f", coldStart))

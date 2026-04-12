@@ -4,8 +4,8 @@ RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
 
 ARG SOURCE
 
-COPY ${SOURCE} /src/
+COPY ${SOURCE} timing.c /src/
 
-RUN gcc -O2 -o /function /src/${SOURCE}
+RUN gcc -O2 -o /function /src/${SOURCE} /src/timing.c
 
 ENTRYPOINT ["/function"]
