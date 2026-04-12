@@ -5,7 +5,7 @@ LD = ld
 OBJCOPY = objcopy
 
 # Compiler flags for all user functions
-CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
+CFLAGS = -ffreestanding -m64 -O2 -Wall -Wextra
 
 # Linker flags
 LDFLAGS_RAW = -Ttext 0x0
@@ -18,46 +18,53 @@ SHIM_LIB = $(SHIM_DIR)/libshim.a
 
 # 1. Separate the C files into 'bare' and 'shim' categories
 RAW_SRCS = $(wildcard bare_*.c)
-SHIM_SRCS = $(filter-out $(RAW_SRCS), $(wildcard *.c))
+SHIM_SRCS = $(filter-out $(RAW_SRCS) iai.c timing.c, $(wildcard *.c))
 
 # 2. Define the expected outputs
 RAW_ELFS = $(RAW_SRCS:.c=.elf)
 SHIM_ELFS = $(SHIM_SRCS:.c=.elf)
 BINS = $(RAW_SRCS:.c=.bin) $(SHIM_SRCS:.c=.bin)
+PROCS = $(SHIM_SRCS:.c=_proc)
 
-# Default target: build all flat binaries
+# Default target: build all ELF binaries for KVM
 all: $(RAW_ELFS) $(SHIM_ELFS)
 
-# Optional target: build all flat binaries (must be explicitly invoked)
+# Target for native process execution
+proc: $(PROCS)
+
+# Target to build all Docker images
+docker-all:
+	@for name in $(SHIM_SRCS:.c=); do \
+		echo "Building Docker image for $$name..."; \
+		docker build --build-arg SOURCE=$${name}.c -t iai_$$name . ; \
+	done
+
+# Step 3: Strip the ELF headers to create the raw flat binaries
 bins: $(BINS)
 
-# Step 3: Strip the ELF headers to create the raw flat binaries (applies to both)
 %.bin: %.elf
 	$(OBJCOPY) -O binary $< $@
 	@echo "--> Successfully generated flat binary: $@"
 
 # Step 2A: Link RAW binaries (No Shim)
-# This uses Static Pattern Rules to only apply to files starting with 'raw_'
 $(RAW_ELFS): %.elf: %.o
 	$(LD) $(LDFLAGS_RAW) $< -o $@
 
 # Step 2B: Link SHIM binaries (With libshim.a and start.o)
-$(SHIM_ELFS): %.elf: %.o
+$(SHIM_ELFS): %.elf: %.o $(SHIM_START) $(SHIM_LIB)
 	$(LD) $(LDFLAGS_SHIM) $(SHIM_START) $< $(SHIM_LIB) -o $@
 
 # Step 1: Compile the C source code into object files
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-proc: prime.c
-	gcc -O2 prime.c -o prime_proc
-
-docker: prime.c
-	docker build -t iai_prime .
+# Native process build (uses standard libc)
+%_proc: %.c timing.c
+	$(CC) -O2 $< timing.c -o $@
 
 # Clean up all build artifacts
 clean:
-	rm -f *.o *.elf *.bin prime_proc
+	rm -f *.o *.elf *.bin *_proc
 	@echo "Cleaned sample binaries."
 
-.PHONY: all bins clean proc docker
+.PHONY: all bins clean proc docker-all

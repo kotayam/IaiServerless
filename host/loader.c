@@ -1,3 +1,5 @@
+#include "../iai_common.h"
+#include "hypercall.h"
 #include <elf.h>
 #include <fcntl.h>
 #include <linux/kvm.h>
@@ -8,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 /* CR0 bits */
@@ -34,7 +37,7 @@
 #define CR4_MCE (1U << 6)
 #define CR4_PGE (1U << 7)
 #define CR4_PCE (1U << 8)
-#define CR4_OSFXSR (1U << 8)
+#define CR4_OSFXSR (1U << 9)
 #define CR4_OSXMMEXCPT (1U << 10)
 #define CR4_UMIP (1U << 11)
 #define CR4_VMXE (1U << 13)
@@ -64,7 +67,7 @@
 
 // usage message
 #define USAGE(bin)                                                             \
-  fprintf(stderr, "Usage: %s [-m memory_in_MB] <binary_file>\n", bin)
+  fprintf(stderr, "Usage: %s [-m memory_in_MB] [-v] <binary_file>\n", bin)
 
 // default memory size 2MB
 #define MB (1024 * 1024)
@@ -79,8 +82,20 @@
 
 // ports for communication
 #define SINGLE_BYTE_PORT 0xE9
-#define SHM_ADDR_PORT 0x10
-#define SHM_LEN_PORT 0x11
+
+int iai_debug = 0;
+
+static inline double ms_since(struct timespec *t0) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (now.tv_sec - t0->tv_sec) * 1e3 + (now.tv_nsec - t0->tv_nsec) / 1e6;
+}
+
+#define IAI_LOG(op, fmt, ...)                                                  \
+  do {                                                                         \
+    if (iai_debug)                                                             \
+      fprintf(stderr, "[HOST ] %-8s " fmt "\n", op, ##__VA_ARGS__);            \
+  } while (0)
 
 struct vm {
   int sys_fd;
@@ -258,7 +273,7 @@ void vcpu_init(struct vm *vm, struct vcpu *vcpu) {
 /**
  * @brief Run the virtual machine.
  */
-int run_vm(struct vcpu *vcpu, const char *mem) {
+int run_vm(struct vcpu *vcpu, char *mem) {
   uint32_t msg_buf_addr = 0;
   struct kvm_run *run = vcpu->kvm_run;
 
@@ -269,9 +284,19 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
     }
 
     switch (run->exit_reason) {
-    case KVM_EXIT_HLT:
-      fprintf(stderr, "[Host] Guest execution completed cleanly.\n");
-      return 0;
+    case KVM_EXIT_HLT: {
+      /* Upon HLT, the guest has finished its main().
+       * We capture the 'rax' register which contains the return code
+       * and use it as the host loader's own exit code. */
+      struct kvm_regs regs;
+      if (ioctl(vcpu->fd, KVM_GET_REGS, &regs) < 0) {
+        perror("KVM_GET_REGS");
+        return 1;
+      }
+      IAI_LOG("EXIT", "Guest execution completed with code %lld.",
+              (long long)regs.rax);
+      return (int)regs.rax;
+    }
 
     case KVM_EXIT_IO:
       if (run->io.direction == KVM_EXIT_IO_OUT) {
@@ -282,13 +307,11 @@ int run_vm(struct vcpu *vcpu, const char *mem) {
         } else if (run->io.port == SHM_ADDR_PORT) {
           // get address of message buffer
           msg_buf_addr = *(uint32_t *)((char *)run + run->io.data_offset);
-          fprintf(stderr, "[Host] Received message buffer address: 0x%x\n",
-                  msg_buf_addr);
+        } else if (run->io.port == HYPERCALL_PORT) {
+          handle_hypercall(mem, msg_buf_addr);
         } else if (run->io.port == SHM_LEN_PORT) {
-          // get size of message
+          // Backward compatibility for old write
           uint32_t length = *(uint32_t *)((char *)run + run->io.data_offset);
-          fprintf(stderr, "[Host] Received message length: %d\n", length);
-          // send it to gateway
           char *shared_buffer = (char *)mem + msg_buf_addr;
           fwrite(shared_buffer, 1, length, stdout);
           fflush(stdout);
@@ -335,7 +358,10 @@ static void setup_64bit_code_segment(struct kvm_sregs *sregs) {
  */
 static void setup_long_mode(struct vm *vm, struct kvm_sregs *sregs) {
   sregs->cr3 = vm->pml4_addr;
-  sregs->cr4 = CR4_PAE;
+  // CR4_PAE is required for long mode.
+  // CR4_OSFXSR and CR4_OSXMMEXCPT enable SSE (XMM registers).
+  // GCC often generates these instructions for optimizations at -O2.
+  sregs->cr4 = CR4_PAE | CR4_OSFXSR | CR4_OSXMMEXCPT;
   // enable paging
   sregs->cr0 = CR0_PE | CR0_MP | CR0_ET | CR0_NE | CR0_WP | CR0_AM | CR0_PG;
   // activate NXE
@@ -445,10 +471,11 @@ uint64_t load_elf(struct vm *vm, const char *filename) {
         map_4k_page(vm, addr, is_writeable, is_executable);
       }
 
-      fprintf(stderr,
-              "[ELF Loader] Segment loaded at 0x%lx | Size: %ld | W=%d X=%d\n",
-              (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
-              is_executable);
+      if (iai_debug) {
+        IAI_LOG("SEGMENT", "at=0x%-8lx size=%-6ld W=%d X=%d",
+                (unsigned long)phdr.p_paddr, (long)phdr.p_memsz, is_writeable,
+                is_executable);
+      }
     }
   }
 
@@ -500,7 +527,9 @@ int main(int argc, char **argv) {
   size_t mem_size = DEFAULT_MEM_SIZE;
   int opt;
 
-  while ((opt = getopt(argc, argv, "m:")) != -1) {
+  init_fd_map();
+
+  while ((opt = getopt(argc, argv, "m:v")) != -1) {
     switch (opt) {
     case 'm':
       mem_size = (size_t)strtoull(optarg, NULL, 10) * MB;
@@ -508,6 +537,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: Invalid memory size.\n");
         return 1;
       }
+      break;
+    case 'v':
+      iai_debug = 1;
       break;
     default:
       USAGE(argv[0]);
@@ -523,21 +555,22 @@ int main(int argc, char **argv) {
 
   const char *bin_filename = argv[optind];
 
-  fprintf(stderr, "Starting VM with %zu bytes of memory...\n", mem_size);
+  IAI_LOG("STARTUP", "Starting VM with %zu bytes of memory...", mem_size);
 
   struct vm vm;
   struct vcpu vcpu;
 
   vm_init(&vm, mem_size);
-  // initialize page tables
   init_page_tables(&vm);
-
-  // load ELF binary
   uint64_t entry_point = load_elf(&vm, bin_filename);
-
-  // initialize VCPU
   vcpu_init(&vm, &vcpu);
 
-  // run the VM
-  return run_long_mode(&vm, &vcpu, entry_point);
+  struct timespec t_exec;
+  clock_gettime(CLOCK_MONOTONIC, &t_exec);
+
+  int ret = run_long_mode(&vm, &vcpu, entry_point);
+
+  fprintf(stderr, "X-Exec-Time: %.4f\n", ms_since(&t_exec));
+
+  return ret;
 }
