@@ -10,11 +10,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var runtimeMode string
 
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
+	
 	// extract function name
 	funcName := strings.TrimPrefix(r.URL.Path, "/")
 	if funcName == "" {
@@ -44,7 +47,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		cmd = exec.Command(binPath)
 	case "docker":
 		containerName := fmt.Sprintf("iai_%s", safeName)
-		cmd = exec.Command("docker", "run", "--rm", containerName)
+		cmd = exec.Command("docker", "run", "--rm", "--network=host", containerName)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
@@ -54,17 +57,28 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
+	
+	t1 := time.Now()
 	err := cmd.Run()
+	t2 := time.Now()
+
+	// Calculate timing metrics in milliseconds (float64)
+	coldStart := float64(t1.Sub(t0).Nanoseconds()) / 1e6
+	execTime := float64(t2.Sub(t1).Nanoseconds()) / 1e6
+	e2e := float64(time.Since(t0).Nanoseconds()) / 1e6
+
+	// Set timing headers
+	w.Header().Set("X-Cold-Start", fmt.Sprintf("%.4f", coldStart))
+	w.Header().Set("X-Exec-Time", fmt.Sprintf("%.4f", execTime))
+	w.Header().Set("X-E2E-Latency", fmt.Sprintf("%.4f", e2e))
 
 	if err != nil {
-		// if host loader returns non-zero, it means the guest function failed
 		w.WriteHeader(http.StatusInternalServerError)
-		// return both the output and the error message to the client
 		w.Write([]byte(fmt.Sprintf("MicroVM Execution Failed:\n%s\n%s", stdoutBuf.String(), stderrBuf.String())))
 		return
 	}
 
-	// send binary output directly to the client
+	// Send successful response
 	w.WriteHeader(http.StatusOK)
 	w.Write(stdoutBuf.Bytes())
 }
