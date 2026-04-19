@@ -1,6 +1,6 @@
+#include "unistd.h"
 #include <stdarg.h>
 #include <stddef.h>
-#include "unistd.h"
 
 static void format_num(char **buf, size_t *remaining, long long num, int base,
                        int width, int zero_pad) {
@@ -15,7 +15,7 @@ static void format_num(char **buf, size_t *remaining, long long num, int base,
   if (num == 0)
     tmp[i++] = '0';
   else {
-    while (num && i < 31) {  // Prevent buffer overflow in tmp
+    while (num && i < 31) { // Prevent buffer overflow in tmp
       int digit = num % base;
       tmp[i++] = digit < 10 ? '0' + digit : 'a' + digit - 10;
       num /= base;
@@ -43,7 +43,7 @@ static void format_num(char **buf, size_t *remaining, long long num, int base,
 static void format_str(char **buf, size_t *remaining, const char *s) {
   if (!s)
     s = "(null)";
-  
+
   // Bounds-checked string copy
   if (buf && *buf && *remaining > 0) {
     while (*s && *remaining > 1) {
@@ -74,7 +74,7 @@ int vsnprintf(char *str, size_t size, const char *fmt, va_list ap) {
       // Parse width with overflow protection
       while (*fmt >= '0' && *fmt <= '9') {
         int digit = *fmt - '0';
-        if (width > (0x7FFFFFFF - digit) / 10)  // Prevent integer overflow
+        if (width > (0x7FFFFFFF - digit) / 10) // Prevent integer overflow
           break;
         width = width * 10 + digit;
         fmt++;
@@ -145,16 +145,16 @@ int snprintf(char *str, size_t size, const char *fmt, ...) {
 }
 
 int printf(const char *fmt, ...) {
-  char buf[512];  // Increased buffer size for safety
+  char buf[512]; // Increased buffer size for safety
   va_list ap;
   va_start(ap, fmt);
   int len = vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  
+
   // Clamp length to buffer size to prevent out-of-bounds read
   if (len >= (int)sizeof(buf))
     len = sizeof(buf) - 1;
-  
+
   write(1, buf, len);
   return len;
 }
