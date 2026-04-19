@@ -126,19 +126,12 @@ const RUNTIMES = [
   { id: 'docker', label: 'docker', port: 8083 },
 ];
 
-function getNativePort(fn) {
-  return fn.startsWith('python/') ? 8082 : 8081;
-  // Note: python runtime on 8082 conflicts with kvm on 8082 — see demo.sh
-  // Actually native python is on 8084, kvm on 8082. Corrected below.
-}
-
 // Port layout (matches demo.sh):
-// 8081 = process (c/*)
-// 8082 = kvm     (c/* and python/*)
-// 8083 = docker  (c/* and python/*)
-// 8084 = python  (python/*)
+// 8081 = native (c/* → process, python/* → python3)
+// 8082 = kvm
+// 8083 = docker
 const PORT_MAP = {
-  native: fn => fn.startsWith('python/') ? 8084 : 8081,
+  native: () => 8081,
   kvm:    () => 8082,
   docker: () => 8083,
 };
@@ -214,15 +207,14 @@ async function runAll() {
   btn.disabled = true;
 
   // Update native port label
-  const nativePort = PORT_MAP.native(fn);
   document.getElementById('native-port').textContent =
-    ':' + nativePort + ' (' + (fn.startsWith('python/') ? 'python' : 'process') + ')';
+    ':8081 (native)';
 
   ['native','kvm','docker'].forEach(resetCol);
 
   const [nativeE2e, kvmE2e, dockerE2e] = await Promise.all([
-    fetchRuntime('native', nativePort,       fn),
-    fetchRuntime('kvm',    PORT_MAP.kvm(),   fn),
+    fetchRuntime('native', PORT_MAP.native(), fn),
+    fetchRuntime('kvm',    PORT_MAP.kvm(),    fn),
     fetchRuntime('docker', PORT_MAP.docker(), fn),
   ]);
 
