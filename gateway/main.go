@@ -16,7 +16,11 @@ import (
 
 var runtimeMode string
 
-func invokeHandler(w http.ResponseWriter, r *http.Request) {
+func staticHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "static/index.html")
+}
+
+
 	t0 := time.Now()
 
 	// extract function name
@@ -96,6 +100,8 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set timing headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Expose-Headers", "X-Cold-Start, X-Exec-Time, X-E2E-Latency")
 	w.Header().Set("X-Cold-Start", fmt.Sprintf("%.4f", coldStart))
 	w.Header().Set("X-Exec-Time", fmt.Sprintf("%.4f", execTime))
 	w.Header().Set("X-E2E-Latency", fmt.Sprintf("%.4f", e2e))
@@ -117,7 +123,13 @@ func main() {
 	flag.Parse()
 	port := fmt.Sprintf(":%s", *portFlag)
 
-	http.HandleFunc("/", invokeHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			staticHandler(w, r)
+		} else {
+			invokeHandler(w, r)
+		}
+	})
 	fmt.Printf("IaiServerless Gateway listening on http://localhost%s...\n", port)
 	fmt.Printf("Active Runtime: %s\n", runtimeMode)
 	log.Fatal(http.ListenAndServe(port, nil))
