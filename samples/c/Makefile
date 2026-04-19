@@ -33,8 +33,10 @@ all: $(RAW_ELFS) $(SHIM_ELFS)
 proc: $(PROCS)
 
 # Target to build all Docker images
+DOCKER_SRCS = $(filter-out test_%, $(SHIM_SRCS))
+
 docker-all:
-	@for name in $(SHIM_SRCS:.c=); do \
+	@for name in $(DOCKER_SRCS:.c=); do \
 		echo "Building Docker image for $$name..."; \
 		docker build --build-arg SOURCE=$${name}.c -t iai_c_$$name . ; \
 	done
