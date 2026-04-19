@@ -39,15 +39,23 @@ IaiServerless is a unikernel-based serverless runtime that executes functions in
 ## Current Branch: add-python-support
 Working on porting MicroPython to run as a unikernel on IaiServerless.
 
-**Recent Progress (2026-04-19):**
-- ✅ Completed all missing shim functions for MicroPython compatibility
-- ✅ Added stdlib: realloc, abort, exit, atoi, strtol (with glibc 2.38+ alias)
-- ✅ Added stdio: printf, snprintf, vsnprintf, putchar, putc, fputc with FILE/stdout/stderr support
-- ✅ Added setjmp/longjmp for exception handling
-- ✅ All implementations include security hardening (bounds checking, overflow protection)
-- ✅ Created comprehensive tests: test_stdlib.c, test_stdio.c, test_setjmp.c
-- ✅ Added MicroPython as git submodule in external/micropython/
-- 🔄 Created out-of-tree port in external/python-port/ (currently building)
+**Status (2026-04-19): MicroPython port complete and working.**
+
+### What's Done
+- MicroPython runs as a freestanding unikernel linked against `libshim.a`
+- Python source files embedded into ELF via `objcopy` (`_binary_code_py_start`)
+- `socket` module implemented in `external/python-port/modsocket.c`, registered as `socket` — standard `import socket` works
+- `shim/netdb.h` added (was missing)
+- NLR exception handling in `main.c` prints tracebacks instead of silent crash
+- `% string formatting` enabled (`MICROPY_PY_BUILTINS_STR_OP_MODULO`)
+- Sample functions: `hello.py`, `prime.py`, `weather.py` (live HTTP to open-meteo.com)
+- Build system: `samples/python/Makefile` + `build.sh`, hooked into root `make`
+
+### Python Coding Constraints (ROM_LEVEL_MINIMUM)
+- No `str.encode()` / `bytes.decode()` — use `bytes("...", "utf-8")` and `str(b, "utf-8")`
+- No float — use integer arithmetic (e.g. `isqrt` pattern)
+- `% formatting` available
+- `import socket` works; `socket.socket()`, `s.connect((host, port))`, `s.send(b)`, `s.recv(n)`, `s.close()`
 
 ## Key Design Decisions
 

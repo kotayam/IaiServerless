@@ -1,91 +1,14 @@
 {
-  "active_tasks": [
-    {
-      "id": "micropython-port",
-      "title": "Port MicroPython minimal to IaiServerless",
-      "status": "in_progress",
-      "priority": "high",
-      "description": "Compile MicroPython as freestanding binary linked against shim - currently building",
-      "dependencies": [],
-      "subtasks": [
-        {
-          "name": "Setup MicroPython submodule",
-          "status": "completed",
-          "notes": "Added as git submodule in external/micropython/"
-        },
-        {
-          "name": "Create port structure",
-          "status": "completed",
-          "notes": "Created external/python-port/ with mpconfigport.h, main.c, Makefile"
-        },
-        {
-          "name": "Configure minimal build",
-          "status": "in_progress",
-          "notes": "Disabled compiler, filesystem, float, threading. Heap: 64KB"
-        },
-        {
-          "name": "Link against shim",
-          "status": "in_progress",
-          "notes": "Makefile references shim/libshim.a and link.ld"
-        },
-        {
-          "name": "Test basic execution",
-          "status": "pending"
-        }
-      ],
-      "files_created": [
-        "external/micropython (submodule)",
-        "external/python-port/mpconfigport.h",
-        "external/python-port/mphalport.h",
-        "external/python-port/qstrdefsport.h",
-        "external/python-port/main.c",
-        "external/python-port/Makefile"
-      ],
-      "next_steps": [
-        "Complete MicroPython build",
-        "Test basic execution with KVM runtime",
-        "Add frozen module support"
-      ]
-    }
-  ],
+  "active_tasks": [],
   "backlog": [
-    {
-      "id": "micropython-port",
-      "title": "Port MicroPython minimal to IaiServerless",
-      "priority": "high",
-      "description": "Compile MicroPython as freestanding binary linked against shim",
-      "dependencies": [],
-      "subtasks": [
-        "Clone MicroPython repository",
-        "Create custom mpconfigport.h (disable filesystem, REPL, float, threading)",
-        "Modify ports/minimal for IaiServerless",
-        "Link MicroPython against libshim.a with link.ld",
-        "Test basic Python execution"
-      ]
-    },
-    {
-      "id": "python-frozen-modules",
-      "title": "Implement frozen module support",
-      "priority": "high",
-      "description": "Compile Python functions into binary using mpy-cross",
-      "dependencies": ["micropython-port"],
-      "subtasks": [
-        "Set up mpy-cross build",
-        "Create sample Python serverless function",
-        "Freeze Python module into MicroPython binary",
-        "Test frozen module execution"
-      ]
-    },
     {
       "id": "python-gateway-integration",
       "title": "Add Python runtime support to gateway",
       "priority": "medium",
       "description": "Extend gateway to support Python functions alongside C/C++",
-      "dependencies": ["python-frozen-modules"],
+      "dependencies": [],
       "subtasks": [
-        "Add python/ directory to samples",
-        "Update gateway to recognize .py functions",
-        "Build Python functions as .elf binaries",
+        "Update gateway to recognize python/ sample directory",
         "Add Python functions to benchmark suite"
       ]
     },
@@ -94,7 +17,7 @@
       "title": "Add HTTP request/response handling for Python",
       "priority": "medium",
       "description": "Enable Python functions to parse HTTP requests and generate responses",
-      "dependencies": ["python-frozen-modules"],
+      "dependencies": [],
       "subtasks": [
         "Implement minimal HTTP parser in Python",
         "Add request object to frozen module context",
@@ -147,12 +70,41 @@
       "title": "Add test for string.h functions",
       "completed_date": "2026-04-19",
       "description": "Created test_string.c to validate all string.h implementations"
+    },
+    {
+      "id": "micropython-port",
+      "title": "Port MicroPython minimal to IaiServerless",
+      "completed_date": "2026-04-19",
+      "description": "MicroPython running as freestanding unikernel linked against shim",
+      "deliverables": [
+        "external/python-port/: mpconfigport.h, main.c, Makefile, modsocket.c",
+        "shim/netdb.h: added missing header for gethostbyname/hostent",
+        "modsocket.c: socket module registered as 'socket' with standard Python interface",
+        "NLR exception handling in main.c with mp_obj_print_exception for error output",
+        "MICROPY_ENABLE_EXTERNAL_IMPORT + mp_import_stat/mp_lexer_new_from_file stubs",
+        "MICROPY_PY_BUILTINS_STR_OP_MODULO enabled for % string formatting"
+      ]
+    },
+    {
+      "id": "python-samples",
+      "title": "Add Python sample functions",
+      "completed_date": "2026-04-19",
+      "description": "Sample Python serverless functions built via objcopy embedding",
+      "deliverables": [
+        "samples/python/hello.py: basic hello world with handler()",
+        "samples/python/prime.py: prime sieve using integer sqrt (no float)",
+        "samples/python/weather.py: live HTTP GET to open-meteo.com API",
+        "samples/python/build.sh: embeds .py into MicroPython ELF via objcopy",
+        "samples/python/Makefile: builds all .py files, hooked into samples/Makefile"
+      ]
     }
   ],
   "notes": [
     "Currently on add-python-support branch",
-    "MicroPython approach chosen over CPython for bare-metal compatibility",
-    "No filesystem needed - Python code will be frozen into binary",
-    "Float support optional - can be disabled to reduce dependencies"
+    "Python code embedded into ELF via objcopy, executed from _binary_code_py_start",
+    "socket module backed by shim hypercalls - standard import socket works",
+    "Float disabled - use integer arithmetic (isqrt pattern for prime)",
+    "str.encode()/decode() unavailable at ROM_LEVEL_MINIMUM - use bytes() and str() constructors",
+    "% string formatting enabled via MICROPY_PY_BUILTINS_STR_OP_MODULO"
   ]
 }
