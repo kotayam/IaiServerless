@@ -11,13 +11,13 @@
 static char heap[MICROPY_HEAP_SIZE];
 
 int main(void) {
+    // Initialize GC first
+    gc_init(heap, heap + sizeof(heap));
+    
     // Initialize MicroPython
     mp_init();
 
-    // Initialize GC
-    gc_init(heap, heap + sizeof(heap));
-
-    // Execute frozen module (will be added later)
+    // Simple test - print message
     printf("MicroPython initialized on IaiServerless\n");
 
     // Clean up
