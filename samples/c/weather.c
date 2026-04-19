@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 int main() {
-  const char *hostname = "open-meteo.com";
+  const char *hostname = "api.open-meteo.com";
   /* Tokyo Latitude: 35.6895, Longitude: 139.6917 */
   const char *path =
       "/v1/forecast?latitude=35.6895&longitude=139.6917&current_weather=true";

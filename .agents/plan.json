@@ -53,6 +53,25 @@
   ],
   "completed_tasks": [
     {
+      "id": "new-samples",
+      "title": "Add alloc_stress and multi_req sample functions",
+      "completed_date": "2026-04-19",
+      "description": "Added alloc_stress and multi_req in C and Python, benchmarked across all runtimes",
+      "deliverables": [
+        "samples/c/alloc_stress.c: 64 malloc/free blocks, pattern verify, 0 errors",
+        "samples/c/multi_req.c: 3 sequential HTTP GETs to api.open-meteo.com (Tokyo, London, NYC)",
+        "samples/python/alloc_stress.py: list-based alloc stress (bytearray unavailable at ROM_LEVEL_MINIMUM)",
+        "samples/python/multi_req.py: 3 sequential socket requests via modsocket.c",
+        "scripts/benchmark.py: net_query removed, alloc_stress and multi_req added to C_SAMPLES and PYTHON_SAMPLES",
+        "samples/c/weather.c: fixed hostname open-meteo.com -> api.open-meteo.com (was returning 301)"
+      ],
+      "findings": [
+        "alloc_stress: hypercall malloc ~5x slower than native (0.146ms vs 0.032ms), sub-ms absolute — negligible",
+        "multi_req: KVM execution identical to process (1011ms) — zero hypercall overhead for sustained I/O",
+        "Docker Python networking significantly slower for I/O-bound workloads (1450ms vs 1011ms for multi_req)"
+      ]
+    },
+    {
       "id": "python-benchmark",
       "title": "Extend benchmark to include Python samples",
       "completed_date": "2026-04-19",
