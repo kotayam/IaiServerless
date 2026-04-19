@@ -1,5 +1,50 @@
 {
-  "active_tasks": [],
+  "active_tasks": [
+    {
+      "id": "new-samples",
+      "title": "Add alloc_stress and multi_req sample functions",
+      "status": "pending",
+      "priority": "high",
+      "description": "Add two new benchmark samples in both C and Python to stress the shim allocator and hypercall socket path",
+      "dependencies": [],
+      "subtasks": [
+        {
+          "name": "Implement samples/c/alloc_stress.c",
+          "status": "pending",
+          "notes": "malloc/free loop with varying sizes, write pattern to each block, verify, free. Output count and total bytes. Tests shim free-list allocator under 2MB guest memory constraint."
+        },
+        {
+          "name": "Implement samples/c/multi_req.c",
+          "status": "pending",
+          "notes": "3 sequential HTTP requests to open-meteo.com (different coordinates). Reuse weather.c socket pattern. Measures hypercall overhead accumulation per socket lifecycle."
+        },
+        {
+          "name": "Implement samples/python/alloc_stress.py",
+          "status": "pending",
+          "notes": "Allocate bytearray objects in a list, verify contents, del. Tests MicroPython GC under memory pressure."
+        },
+        {
+          "name": "Implement samples/python/multi_req.py",
+          "status": "pending",
+          "notes": "3 sequential socket.socket() calls to open-meteo.com. Stress test for modsocket.c hypercall path."
+        },
+        {
+          "name": "Add new samples to benchmark.py",
+          "status": "pending",
+          "notes": "Add c/alloc_stress, c/multi_req to C_SAMPLES. Add python/alloc_stress, python/multi_req to PYTHON_SAMPLES. No Makefile changes needed — both Makefiles use wildcard."
+        }
+      ],
+      "files_to_create": [
+        "samples/c/alloc_stress.c",
+        "samples/c/multi_req.c",
+        "samples/python/alloc_stress.py",
+        "samples/python/multi_req.py"
+      ],
+      "files_to_modify": [
+        "scripts/benchmark.py"
+      ]
+    }
+  ],
   "backlog": [
     {
       "id": "python-gateway-integration",
