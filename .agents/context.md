@@ -39,6 +39,14 @@ IaiServerless is a unikernel-based serverless runtime that executes functions in
 ## Current Branch: add-python-support
 Working on porting MicroPython to run as a unikernel on IaiServerless.
 
+**Recent Progress (2026-04-19):**
+- ✅ Completed all missing shim functions for MicroPython compatibility
+- ✅ Added stdlib: realloc, abort, exit, atoi, strtol (with glibc 2.38+ alias)
+- ✅ Added stdio: printf, snprintf, vsnprintf, putchar, putc, fputc with FILE/stdout/stderr support
+- ✅ Added setjmp/longjmp for exception handling
+- ✅ All implementations include security hardening (bounds checking, overflow protection)
+- ✅ Created comprehensive tests: test_stdlib.c, test_stdio.c, test_setjmp.c
+
 ## Key Design Decisions
 
 ### Memory Management
@@ -64,11 +72,13 @@ Working on porting MicroPython to run as a unikernel on IaiServerless.
   - `-ffreestanding -nostdlib -m64 -O2 -Wall -Wextra`
   - Manual memory management
   - Explicit error handling (return codes, no exceptions)
+  - Security: bounds checking, integer overflow protection, pointer validation
   
 - **Naming Conventions**:
   - Hypercall ops: `IAI_*` (e.g., IAI_WRITE, IAI_SOCKET)
   - I/O ports: `*_PORT` (e.g., HYPERCALL_PORT)
   - Shim functions: standard C library names (write, malloc, strlen, etc.)
+  - Compiler optimization aliases: Add `_` prefix and glibc version variants as needed
 
 - **Build System**:
   - Root Makefile orchestrates host, shim, samples, gateway

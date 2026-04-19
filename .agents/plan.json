@@ -1,67 +1,23 @@
 {
   "active_tasks": [
     {
-      "id": "python-shim-functions",
-      "title": "Add missing shim functions for MicroPython compatibility",
-      "status": "in_progress",
+      "id": "micropython-port",
+      "title": "Port MicroPython minimal to IaiServerless",
+      "status": "ready",
       "priority": "high",
-      "description": "Implement missing C library functions required by MicroPython runtime",
+      "description": "Compile MicroPython as freestanding binary linked against shim - all dependencies complete",
+      "dependencies": [],
       "subtasks": [
-        {
-          "name": "stdlib.h additions",
-          "status": "pending",
-          "items": [
-            "realloc() - for GC and list resizing",
-            "abort() - fatal error handler",
-            "exit() - interpreter shutdown",
-            "atoi() - string to int conversion",
-            "strtol() - string to long with base support"
-          ]
-        },
-        {
-          "name": "stdio.h implementation",
-          "status": "pending",
-          "items": [
-            "snprintf() - string formatting (critical for Python)",
-            "printf() - wrapper over write()",
-            "putchar() - single char output"
-          ]
-        },
-        {
-          "name": "setjmp.h implementation",
-          "status": "pending",
-          "items": [
-            "setjmp() - save execution context",
-            "longjmp() - restore execution context (needed for Python exceptions)"
-          ]
-        },
-        {
-          "name": "Test new shim functions",
-          "status": "pending",
-          "items": [
-            "Create test_stdlib.c for realloc, abort, exit, atoi, strtol",
-            "Create test_stdio.c for printf, snprintf, putchar",
-            "Create test_setjmp.c for setjmp/longjmp"
-          ]
-        }
+        "Clone MicroPython repository",
+        "Create custom mpconfigport.h (disable filesystem, REPL, float, threading)",
+        "Modify ports/minimal for IaiServerless",
+        "Link MicroPython against libshim.a with link.ld",
+        "Test basic Python execution"
       ],
-      "files_involved": [
-        "shim/stdlib.h",
-        "shim/stdlib.c",
-        "shim/stdio.h",
-        "shim/stdio.c",
-        "shim/setjmp.h",
-        "shim/setjmp.S",
-        "shim/Makefile",
-        "samples/c/test_stdlib.c",
-        "samples/c/test_stdio.c",
-        "samples/c/test_setjmp.c"
-      ],
-      "notes": [
-        "String functions (strcmp, strchr, etc.) already complete in string.c",
-        "memmove and memcmp already implemented",
-        "Math functions (floor, ceil, pow, sqrt) can be skipped by disabling float support in MicroPython",
-        "strtod can be stubbed if float support is disabled"
+      "next_steps": [
+        "Clone MicroPython repo into project",
+        "Create ports/iaiserverless directory",
+        "Write mpconfigport.h with minimal configuration"
       ]
     }
   ],
@@ -71,7 +27,7 @@
       "title": "Port MicroPython minimal to IaiServerless",
       "priority": "high",
       "description": "Compile MicroPython as freestanding binary linked against shim",
-      "dependencies": ["python-shim-functions"],
+      "dependencies": [],
       "subtasks": [
         "Clone MicroPython repository",
         "Create custom mpconfigport.h (disable filesystem, REPL, float, threading)",
@@ -146,6 +102,19 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "python-shim-functions",
+      "title": "Add missing shim functions for MicroPython compatibility",
+      "completed_date": "2026-04-19",
+      "description": "Implemented all required C library functions for MicroPython runtime",
+      "deliverables": [
+        "stdlib.h/c: realloc, abort, exit, atoi, strtol with __isoc23_strtol alias",
+        "stdio.h/c: printf, snprintf, vsnprintf, putchar, putc, fputc with FILE/stdout/stderr",
+        "setjmp.h/S: setjmp, longjmp, _setjmp for exception handling",
+        "Security hardening: bounds checking, overflow protection, pointer validation",
+        "Tests: test_stdlib.c, test_stdio.c, test_setjmp.c - all passing"
+      ]
+    },
     {
       "id": "string-test",
       "title": "Add test for string.h functions",
