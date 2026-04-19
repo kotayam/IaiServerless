@@ -396,6 +396,8 @@ int run_long_mode(struct vm *vm, struct vcpu *vcpu, uint64_t entry_point) {
   regs.rip = entry_point;
   // create stack at top of reserved memory
   regs.rsp = vm->mem_size;
+  // pass memory size to guest via rbx
+  regs.rbx = vm->mem_size;
 
   if (ioctl(vcpu->fd, KVM_SET_REGS, &regs) < 0) {
     perror("KVM_SET_REGS");

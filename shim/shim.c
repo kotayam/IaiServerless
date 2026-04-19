@@ -113,6 +113,38 @@ int gethostbyname_r(const char *name, uint32_t *addr) {
     return (int)ret;
 }
 
+static char *current_brk = NULL;
+static size_t guest_mem_size = 0;
+extern char _end;
+
+void _init_memory(size_t mem_size) {
+    guest_mem_size = mem_size;
+    current_brk = &_end;
+}
+
+int brk(void *addr) {
+    if (!current_brk) current_brk = &_end;
+    
+    if (addr < (void *)&_end) return -1;
+    if (addr >= (void *)(size_t)guest_mem_size) return -1;
+    
+    current_brk = addr;
+    return 0;
+}
+
+void *sbrk(long increment) {
+    if (!current_brk) current_brk = &_end;
+    
+    char *new_brk = current_brk + increment;
+    
+    if (new_brk < &_end) return (void *)-1;
+    if (new_brk >= (char *)(size_t)guest_mem_size) return (void *)-1;
+    
+    char *old_brk = current_brk;
+    current_brk = new_brk;
+    return old_brk;
+}
+
 struct hostent {
     char  *h_name;
     char **h_aliases;
