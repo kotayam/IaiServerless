@@ -28,7 +28,7 @@ docker-all:
 	@for src in $(SRCS); do \
 		name=$${src%.cpp}; \
 		echo "Building Docker image for $$name..."; \
-		docker build --build-arg SOURCE=$$src -t iai_$$name . ; \
+		docker build --build-arg SOURCE=$$src -t iai_cpp_$$name . ; \
 	done
 
 clean:

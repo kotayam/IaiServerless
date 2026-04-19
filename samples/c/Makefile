@@ -36,7 +36,7 @@ proc: $(PROCS)
 docker-all:
 	@for name in $(SHIM_SRCS:.c=); do \
 		echo "Building Docker image for $$name..."; \
-		docker build --build-arg SOURCE=$${name}.c -t iai_$$name . ; \
+		docker build --build-arg SOURCE=$${name}.c -t iai_c_$$name . ; \
 	done
 
 # Step 3: Strip the ELF headers to create the raw flat binaries
