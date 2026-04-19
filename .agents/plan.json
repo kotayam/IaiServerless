@@ -1,5 +1,63 @@
 {
-  "active_tasks": [],
+  "active_tasks": [
+    {
+      "id": "inter-function-calls",
+      "title": "Add stdin/read support for inter-function calls",
+      "status": "pending",
+      "priority": "high",
+      "description": "Enable c/weather to call python/weather_parser via the gateway, passing raw JSON as HTTP request body. Requires read() hypercall and gateway stdin piping.",
+      "dependencies": ["demo-ui"],
+      "subtasks": [
+        {
+          "name": "Add IAI_READ to iai_common.h",
+          "status": "pending",
+          "notes": "Add IAI_READ to the iai_op enum after IAI_GETHOSTBYNAME."
+        },
+        {
+          "name": "Add IAI_READ handler to host/hypercall.c",
+          "status": "pending",
+          "notes": "Identical to IAI_RECV but without flags. args[0]=fd, args[1]=maxlen. Calls read(host_fd, payload, args[1]). guest_to_host_fds[0] already maps to STDIN_FILENO."
+        },
+        {
+          "name": "Add read() to shim/unistd.c and unistd.h",
+          "status": "pending",
+          "notes": "Same pattern as recv(). hypercall(IAI_READ, fd, maxlen, 0, 0, NULL, 0), then memcpy from message_buffer on success."
+        },
+        {
+          "name": "Expose INPUT global in external/python-port/main.c",
+          "status": "pending",
+          "notes": "Before calling handler(), read all of stdin into a buffer. Register as a MicroPython global string 'INPUT' so weather_parser.py can access it."
+        },
+        {
+          "name": "Pipe HTTP request body to cmd stdin in gateway/main.go",
+          "status": "pending",
+          "notes": "Set cmd.Stdin = r.Body so POST body is available to the function via stdin."
+        },
+        {
+          "name": "Implement samples/python/weather_parser.py",
+          "status": "pending",
+          "notes": "Reads INPUT global (raw JSON from open-meteo), extracts temperature/windspeed/weathercode with string search, prints formatted weather string."
+        },
+        {
+          "name": "Update samples/c/weather.c",
+          "status": "pending",
+          "notes": "After fetching JSON from open-meteo, POST it to localhost:<gateway_port>/python/weather_parser and output the response. Port passed as compile-time constant or hardcoded to 8082 (kvm gateway)."
+        }
+      ],
+      "files_to_create": [
+        "samples/python/weather_parser.py"
+      ],
+      "files_to_modify": [
+        "iai_common.h",
+        "host/hypercall.c",
+        "shim/unistd.c",
+        "shim/unistd.h",
+        "external/python-port/main.c",
+        "gateway/main.go",
+        "samples/c/weather.c"
+      ]
+    }
+  ],
   "backlog": [
     {
       "id": "python-gateway-integration",
@@ -52,6 +110,17 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "demo-ui",
+      "title": "Build interactive demo UI",
+      "completed_date": "2026-04-19",
+      "description": "Single-page demo with 3-column runtime comparison, live latency bars, and source code display",
+      "deliverables": [
+        "gateway/static/index.html: 3-column UI (native/kvm/docker), parallel fetch, latency bars, source panel",
+        "gateway/main.go: static handler on GET /, CORS headers, /source/* endpoint",
+        "scripts/demo.sh: 4 gateways (process:8081, kvm:8082, docker:8083, python:8084)"
+      ]
+    },
     {
       "id": "new-samples",
       "title": "Add alloc_stress and multi_req sample functions",

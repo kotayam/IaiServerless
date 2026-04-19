@@ -16,6 +16,28 @@ import (
 
 var runtimeMode string
 
+func staticHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "static/index.html")
+}
+
+func sourceHandler(w http.ResponseWriter, r *http.Request) {
+	fn := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/source/"))
+	var path string
+	if strings.HasPrefix(fn, "python/") {
+		path = fmt.Sprintf("../samples/%s.py", fn)
+	} else {
+		path = fmt.Sprintf("../samples/%s.c", fn)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(data)
+}
+
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	t0 := time.Now()
 
@@ -96,6 +118,8 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set timing headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Expose-Headers", "X-Cold-Start, X-Exec-Time, X-E2E-Latency")
 	w.Header().Set("X-Cold-Start", fmt.Sprintf("%.4f", coldStart))
 	w.Header().Set("X-Exec-Time", fmt.Sprintf("%.4f", execTime))
 	w.Header().Set("X-E2E-Latency", fmt.Sprintf("%.4f", e2e))
@@ -117,7 +141,14 @@ func main() {
 	flag.Parse()
 	port := fmt.Sprintf(":%s", *portFlag)
 
-	http.HandleFunc("/", invokeHandler)
+	http.HandleFunc("/source/", sourceHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			staticHandler(w, r)
+		} else {
+			invokeHandler(w, r)
+		}
+	})
 	fmt.Printf("IaiServerless Gateway listening on http://localhost%s...\n", port)
 	fmt.Printf("Active Runtime: %s\n", runtimeMode)
 	log.Fatal(http.ListenAndServe(port, nil))
