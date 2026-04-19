@@ -6,6 +6,11 @@ typedef long ssize_t;
 // Define alloca
 #define alloca(size) __builtin_alloca(size)
 
+// Define SEEK constants
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 // Minimal MicroPython configuration for IaiServerless unikernel
 
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_MINIMUM)

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "py/compile.h"
 #include "py/runtime.h"
 #include "py/gc.h"
 #include "py/mperrno.h"
+#include "py/frozenmod.h"
 
 // Heap for MicroPython GC
 static char heap[MICROPY_HEAP_SIZE];
@@ -11,8 +13,6 @@ static char heap[MICROPY_HEAP_SIZE];
 int main(void) {
     // Initialize MicroPython
     mp_init();
-    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_path), 0);
-    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     // Initialize GC
     gc_init(heap, heap + sizeof(heap));
@@ -43,3 +43,18 @@ void __assert_func(const char *file, int line, const char *func, const char *exp
     printf("Assertion '%s' failed, at file %s:%d\n", expr, file, line);
     exit(1);
 }
+
+// Alias for glibc assert
+void __assert_fail(const char *expr, const char *file, unsigned int line, const char *func) {
+    __assert_func(file, line, func, expr);
+}
+
+// Required: HAL stdout function
+void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {
+    write(1, str, len);
+}
+
+// Required: Frozen module stubs (no frozen modules yet)
+const char mp_frozen_names[] = {0};
+const uint32_t mp_frozen_mpy_content[] = {0};
+const mp_frozen_module_t mp_qstr_frozen_const_pool = {0};
