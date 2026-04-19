@@ -1,44 +1,6 @@
 {
   "active_tasks": [
     {
-      "id": "demo-ui",
-      "title": "Build interactive demo UI",
-      "status": "in-progress",
-      "priority": "high",
-      "description": "A single-page demo that fires the same function request to 3 gateway instances (process/python, kvm, docker) in parallel and visualizes latency differences in real time",
-      "dependencies": [],
-      "subtasks": [
-        {
-          "name": "Add static file handler to gateway",
-          "status": "done",
-          "notes": "Serves gateway/static/index.html on GET /. CORS headers added to all function responses."
-        },
-        {
-          "name": "Create gateway/static/index.html",
-          "status": "done",
-          "notes": "3-column UI (native/kvm/docker), function dropdown, parallel fetch, relative latency bars, live timing from response headers."
-        },
-        {
-          "name": "Create scripts/demo.sh",
-          "status": "done",
-          "notes": "4 gateways: process:8081, kvm:8082, docker:8083, python:8084. Builds gateway and samples, traps SIGINT."
-        }
-        {
-          "name": "Add /source/* endpoint to gateway and source panel to UI",
-          "status": "pending",
-          "notes": "Gateway serves raw source file on GET /source/<fn> (reads ../samples/c/<name>.c or ../samples/python/<name>.py). UI fetches and displays below results with syntax highlight via <pre>."
-        }
-      ],
-      "files_to_create": [
-        "gateway/static/index.html",
-        "scripts/demo.sh"
-      ],
-      "files_to_modify": [
-        "gateway/main.go"
-      ],
-      "open_questions": []
-    },
-    {
       "id": "inter-function-calls",
       "title": "Add stdin/read support for inter-function calls",
       "status": "pending",
@@ -148,6 +110,17 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "demo-ui",
+      "title": "Build interactive demo UI",
+      "completed_date": "2026-04-19",
+      "description": "Single-page demo with 3-column runtime comparison, live latency bars, and source code display",
+      "deliverables": [
+        "gateway/static/index.html: 3-column UI (native/kvm/docker), parallel fetch, latency bars, source panel",
+        "gateway/main.go: static handler on GET /, CORS headers, /source/* endpoint",
+        "scripts/demo.sh: 4 gateways (process:8081, kvm:8082, docker:8083, python:8084)"
+      ]
+    },
     {
       "id": "new-samples",
       "title": "Add alloc_stress and multi_req sample functions",
