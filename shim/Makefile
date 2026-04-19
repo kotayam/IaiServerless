@@ -5,8 +5,8 @@ AR = ar
 CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
 
 SRCS_C = hypercall.c unistd.c netdb.c string.c stdlib.c stdio.c
-SRCS_S = start.S
-OBJS = start.o hypercall.o unistd.o netdb.o string.o stdlib.o stdio.o
+SRCS_S = start.S setjmp.S
+OBJS = start.o hypercall.o unistd.o netdb.o string.o stdlib.o stdio.o setjmp.o
 
 all: libshim.a
 
