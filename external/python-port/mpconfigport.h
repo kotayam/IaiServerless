@@ -22,7 +22,7 @@ typedef long ssize_t;
 #define MICROPY_ENABLE_GC                 (1)
 #define MICROPY_HELPER_REPL               (0)
 #define MICROPY_MODULE_FROZEN_MPY         (1)
-#define MICROPY_ENABLE_EXTERNAL_IMPORT    (0)
+#define MICROPY_ENABLE_EXTERNAL_IMPORT    (1)
 
 // Disable filesystem
 #define MICROPY_VFS                       (0)
@@ -30,6 +30,9 @@ typedef long ssize_t;
 
 // Disable float support
 #define MICROPY_FLOAT_IMPL                (MICROPY_FLOAT_IMPL_NONE)
+
+// Enable % string formatting
+#define MICROPY_PY_BUILTINS_STR_OP_MODULO (1)
 
 // Disable threading
 #define MICROPY_PY_THREAD                 (0)

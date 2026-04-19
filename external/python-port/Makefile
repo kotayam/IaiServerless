@@ -31,7 +31,8 @@ SHIM_START = $(SHIM_DIR)/start.o
 SHIM_LIB = $(SHIM_DIR)/libshim.a
 
 # Source files
-SRC_C = main.c
+SRC_C = main.c modsocket.c
+SRC_QSTR += modsocket.c
 
 OBJ = $(PY_CORE_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
