@@ -11,4 +11,4 @@ gateway/gateway
 gateway/gateway_bin
 
 # samples
-samples/*_proc
+samples/c/*_proc

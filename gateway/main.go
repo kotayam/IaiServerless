@@ -22,12 +22,12 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	// extract function name
 	funcName := strings.TrimPrefix(r.URL.Path, "/")
 	if funcName == "" {
-		http.Error(w, "IaiServerless Gateway is active. Request a function like /hello", http.StatusBadRequest)
+		http.Error(w, "IaiServerless Gateway is active. Request a function like c/hello", http.StatusBadRequest)
 		return
 	}
 
 	// create path to binary
-	safeName := filepath.Base(funcName)
+	safeName := filepath.Clean(funcName)
 
 	// run binary
 	var cmd *exec.Cmd
@@ -47,7 +47,8 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cmd = exec.Command(binPath)
 	case "docker":
-		containerName := fmt.Sprintf("iai_%s", safeName)
+		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
+		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", containerName)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)

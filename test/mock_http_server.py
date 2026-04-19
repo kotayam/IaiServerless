@@ -12,7 +12,7 @@ class MockHandler(BaseHTTPRequestHandler):
         print("[Mock Server] Response sent.")
 
 if __name__ == "__main__":
-    port = 8000
+    port = 8001
     try:
         server = HTTPServer(('127.0.0.1', port), MockHandler)
         print(f"Mock HTTP Server running on http://127.0.0.1:{port}...")

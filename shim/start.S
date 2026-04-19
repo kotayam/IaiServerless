@@ -1,5 +1,6 @@
 .global _start
 .extern main
+.extern _init_memory
 
 .section .text.entry
 _start:
@@ -7,6 +8,10 @@ _start:
     xor %rbp, %rbp
     # Align the stack pointer to a 16-byte boundary
     and $-16, %rsp
+
+    # Pass memory size (from rbx) to initialization
+    mov %rbx, %rdi
+    call _init_memory
 
     # Call the user's main function
     call main

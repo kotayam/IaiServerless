@@ -31,6 +31,8 @@ SECTIONS
         *(.bss)
     }
     
+    _end = .;
+    
     /DISCARD/ : {
         *(.eh_frame)
         *(.comment)
