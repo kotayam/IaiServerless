@@ -17,13 +17,14 @@ echo "    :8083  docker   (c/* and python/*)"
 echo "    :8084  python   (python/*)"
 echo ""
 
-./gateway/gateway_bin -runtime=process -port=8081 &
+cd gateway
+./gateway_bin -runtime=process -port=8081 &
 PID1=$!
-./gateway/gateway_bin -runtime=kvm     -port=8082 &
+./gateway_bin -runtime=kvm     -port=8082 &
 PID2=$!
-./gateway/gateway_bin -runtime=docker  -port=8083 &
+./gateway_bin -runtime=docker  -port=8083 &
 PID3=$!
-./gateway/gateway_bin -runtime=python  -port=8084 &
+./gateway_bin -runtime=python  -port=8084 &
 PID4=$!
 
 trap "echo ''; echo '[*] Shutting down...'; kill $PID1 $PID2 $PID3 $PID4 2>/dev/null" EXIT INT TERM
