@@ -12,7 +12,7 @@ LDFLAGS_RAW = -Ttext 0x0
 LDFLAGS_SHIM = -T $(SHIM_DIR)/link.ld
 
 # Paths to the Shim library
-SHIM_DIR = ../shim
+SHIM_DIR = ../../shim
 SHIM_START = $(SHIM_DIR)/start.o
 SHIM_LIB = $(SHIM_DIR)/libshim.a
 
