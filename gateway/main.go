@@ -88,6 +88,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
+	cmd.Stdin = r.Body
 
 	t1 := time.Now()
 	err := cmd.Run()
