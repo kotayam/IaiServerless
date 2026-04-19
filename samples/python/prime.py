@@ -6,7 +6,10 @@ def is_prime(n):
             return False
     return True
 
-# Find primes up to 100
-primes = [n for n in range(2, 101) if is_prime(n)]
-print("Primes up to 100:", primes)
-print("Count:", len(primes))
+def handler():
+    # Find primes up to 100
+    primes = [n for n in range(2, 101) if is_prime(n)]
+    print("Primes up to 100:", primes)
+    print("Count:", len(primes))
+    return primes
+
