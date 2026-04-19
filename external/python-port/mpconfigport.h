@@ -1,5 +1,11 @@
 #include <stdint.h>
 
+// Define ssize_t for MicroPython
+typedef long ssize_t;
+
+// Define alloca
+#define alloca(size) __builtin_alloca(size)
+
 // Minimal MicroPython configuration for IaiServerless unikernel
 
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_MINIMUM)
