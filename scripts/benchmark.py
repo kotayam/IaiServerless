@@ -9,8 +9,10 @@ import signal
 import argparse
 
 GATEWAY_PORT = 8080
-RUNTIMES = ["process", "kvm", "docker"]
-SAMPLES = ["c/hello", "c/prime", "c/net_query", "c/weather", "c/json_builder"]
+C_RUNTIMES = ["process", "kvm", "docker"]
+PYTHON_RUNTIMES = ["python", "kvm", "docker"]
+C_SAMPLES = ["c/hello", "c/prime", "c/net_query", "c/weather", "c/json_builder"]
+PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather"]
 
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
@@ -49,14 +51,14 @@ def run_benchmark(sample, num_requests):
     
     # Warm up request
     try:
-        requests.get(f"{GATEWAY_URL}/{sample}")
+        requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
     except:
         pass
 
     for _ in range(num_requests):
         try:
             t0 = time.time()
-            resp = requests.get(f"{GATEWAY_URL}/{sample}")
+            resp = requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
             client_e2e = (time.time() - t0) * 1000 # ms
             
             if resp.status_code == 200:
@@ -88,23 +90,32 @@ def main():
 
     # Ensure everything is built
     print("[*] Preparing binaries and Docker images...")
-    # Fix: Redirect build output to stderr so we see errors if they happen
     build_proc = subprocess.run(["make", "-C", "samples", "proc", "docker-all"])
     if build_proc.returncode != 0:
         print("Error: Build failed. Please check the output above.")
         sys.exit(1)
-    
+
     final_report = {}
 
-    for rt in RUNTIMES:
+    for rt in C_RUNTIMES:
         gw_proc = start_gateway(rt, args.port)
         final_report[rt] = {}
-        
-        for sample in SAMPLES:
+        for sample in C_SAMPLES:
             results = run_benchmark(sample, num_req)
             final_report[rt][sample] = results
-            
-        # Stop gateway
+        gw_proc.terminate()
+        try:
+            gw_proc.wait(timeout=5)
+        except:
+            gw_proc.kill()
+        time.sleep(1)
+
+    for rt in PYTHON_RUNTIMES:
+        gw_proc = start_gateway(rt, args.port)
+        final_report.setdefault(rt, {})
+        for sample in PYTHON_SAMPLES:
+            results = run_benchmark(sample, num_req)
+            final_report[rt][sample] = results
         gw_proc.terminate()
         try:
             gw_proc.wait(timeout=5)
@@ -116,17 +127,33 @@ def main():
     print("\n" + "="*70)
     print("                 IAI SERVERLESS BENCHMARK REPORT")
     print("="*70)
-    
-    for sample in SAMPLES:
+
+    print("\n--- C FUNCTIONS ---")
+    for sample in C_SAMPLES:
         print(f"\nFUNCTION: /{sample}")
         print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
         print(f"----------|------------------|-----------------|------------------")
-        for rt in RUNTIMES:
-            res = final_report[rt][sample]
+        for rt in C_RUNTIMES:
+            res = final_report[rt].get(sample, [])
             if res:
                 avg_cold = statistics.mean([r.cold_start for r in res])
                 avg_exec = statistics.mean([r.exec_time for r in res])
-                avg_e2e = statistics.mean([r.e2e_latency for r in res])
+                avg_e2e  = statistics.mean([r.e2e_latency for r in res])
+                print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
+            else:
+                print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
+
+    print("\n--- PYTHON FUNCTIONS ---")
+    for sample in PYTHON_SAMPLES:
+        print(f"\nFUNCTION: /{sample}")
+        print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
+        print(f"----------|------------------|-----------------|------------------")
+        for rt in PYTHON_RUNTIMES:
+            res = final_report[rt].get(sample, [])
+            if res:
+                avg_cold = statistics.mean([r.cold_start for r in res])
+                avg_exec = statistics.mean([r.exec_time for r in res])
+                avg_e2e  = statistics.mean([r.e2e_latency for r in res])
                 print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
             else:
                 print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
