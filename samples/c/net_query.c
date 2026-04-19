@@ -26,7 +26,7 @@ int main() {
   serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
   if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-    const char *err = "Error: Failed to connect to 127.0.0.1:8000\n";
+    const char *err = "Error: Failed to connect to 127.0.0.1:8001\n";
     write(1, err, strlen(err));
     close(sockfd);
     return 2;
