@@ -1,12 +1,60 @@
 {
-  "active_tasks": [],
+  "active_tasks": [
+    {
+      "id": "python-benchmark",
+      "title": "Extend benchmark to include Python samples",
+      "status": "pending",
+      "priority": "high",
+      "description": "Add Python functions to the benchmark suite with all three runtimes: kvm (.elf), process (python3 script.py), docker (python:3.11-slim image)",
+      "dependencies": [],
+      "subtasks": [
+        {
+          "name": "Add Dockerfile for Python samples",
+          "status": "pending",
+          "notes": "samples/python/Dockerfile using python:3.11-slim, ARG SOURCE, ENTRYPOINT python3 /function.py. Mirror pattern from samples/c/Dockerfile"
+        },
+        {
+          "name": "Add proc and docker-all targets to samples/python/Makefile",
+          "status": "pending",
+          "notes": "proc target: copy .py files as _proc scripts with python3 shebang (or symlink). docker-all: docker build --build-arg SOURCE=<name>.py -t iai_python_<name>"
+        },
+        {
+          "name": "Add python process runtime support to gateway",
+          "status": "pending",
+          "notes": "For process mode, gateway looks for samples/python/<name>_proc. Need to handle python/ prefix - either run as 'python3 <script>' or make the _proc an executable wrapper. Check how gateway resolves python/<name>_proc path."
+        },
+        {
+          "name": "Extend benchmark.py with Python samples",
+          "status": "pending",
+          "notes": "Add 'python/hello', 'python/prime', 'python/weather' to SAMPLES list. weather.py makes a real HTTP call so expect high exec time - may want separate NETWORK_SAMPLES list or just include it."
+        },
+        {
+          "name": "Test and verify benchmark output",
+          "status": "pending",
+          "notes": "Run benchmark across all 3 runtimes for python samples. Verify X-Exec-Time header is emitted correctly for process/docker modes (weather.py doesn't call timing.c equivalent)"
+        }
+      ],
+      "files_to_create": [
+        "samples/python/Dockerfile"
+      ],
+      "files_to_modify": [
+        "samples/python/Makefile",
+        "scripts/benchmark.py"
+      ],
+      "open_questions": [
+        "Python process _proc: should it be a shell wrapper (#!/usr/bin/env python3) or does the gateway need a new 'python' runtime mode?",
+        "weather.py has ~350ms exec time due to real HTTP - include in benchmark or exclude as network-dependent?",
+        "Python scripts don't emit X-Exec-Time header in process/docker mode - need to add timing output to the .py files or handle missing header in gateway/benchmark"
+      ]
+    }
+  ],
   "backlog": [
     {
       "id": "python-gateway-integration",
       "title": "Add Python runtime support to gateway",
       "priority": "medium",
       "description": "Extend gateway to support Python functions alongside C/C++",
-      "dependencies": [],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Update gateway to recognize python/ sample directory",
         "Add Python functions to benchmark suite"
@@ -29,7 +77,7 @@
       "title": "Optimize Python cold start performance",
       "priority": "low",
       "description": "Profile and optimize MicroPython initialization time",
-      "dependencies": ["python-gateway-integration"],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Measure baseline cold start time",
         "Profile MicroPython initialization",
@@ -42,7 +90,7 @@
       "title": "Document Python runtime usage",
       "priority": "low",
       "description": "Add documentation for writing and deploying Python functions",
-      "dependencies": ["python-gateway-integration"],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Update README.md with Python examples",
         "Document mpconfigport.h configuration",
