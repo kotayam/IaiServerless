@@ -132,6 +132,20 @@ void handle_hypercall(char *mem, uint32_t msg_buf_addr) {
             req->err);
     break;
   }
+  case IAI_READ: {
+    int fd =
+        (req->args[0] < MAX_GUEST_FDS) ? guest_to_host_fds[req->args[0]] : -1;
+    if (fd == -1) {
+      req->ret = -1;
+      req->err = EBADF;
+    } else {
+      req->ret = read(fd, payload, req->args[1]);
+      req->err = errno;
+    }
+    IAI_LOG("READ", "guest_fd=%-2d maxlen=%-4u -> ret=%-4d err=%d",
+            req->args[0], req->args[1], req->ret, req->err);
+    break;
+  }
   case IAI_GETHOSTBYNAME: {
     struct hostent *he = gethostbyname((char *)payload);
     if (!he) {
