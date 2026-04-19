@@ -19,21 +19,21 @@
   button:disabled { background: #333; border-color: #333; color: #666; cursor: default; }
 
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .col { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 16px; }
-  .col h2 { font-size: 0.85rem; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #2a2a2a; }
-  .col h2 span { font-size: 0.7rem; color: #666; display: block; margin-top: 2px; }
+  .col { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 24px; }
+  .col h2 { font-size: 1rem; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #2a2a2a; }
+  .col h2 span { font-size: 0.8rem; color: #666; display: block; margin-top: 4px; }
 
-  .metrics { margin-bottom: 12px; }
-  .metric { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 3px 0; }
+  .metrics { margin-bottom: 16px; }
+  .metric { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 5px 0; }
   .metric .label { color: #888; }
   .metric .value { color: #4ec9b0; font-weight: bold; }
   .metric .value.pending { color: #555; }
 
-  .bar-wrap { height: 6px; background: #2a2a2a; border-radius: 3px; margin: 8px 0 12px; overflow: hidden; }
+  .bar-wrap { height: 8px; background: #2a2a2a; border-radius: 3px; margin: 10px 0 16px; overflow: hidden; }
   .bar { height: 100%; background: #2a6496; border-radius: 3px; width: 0; transition: width 0.4s ease; }
 
-  .response { font-size: 0.72rem; color: #888; background: #111; border: 1px solid #222;
-    padding: 8px; max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .response { font-size: 0.78rem; color: #888; background: #111; border: 1px solid #222;
+    padding: 12px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
   .response.error { color: #e06c75; }
   .response.empty { color: #444; font-style: italic; }
 
