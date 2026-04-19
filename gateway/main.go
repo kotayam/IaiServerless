@@ -46,6 +46,13 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cmd = exec.Command(binPath)
+	case "python":
+		scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
+		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function script not found: %s", scriptPath), http.StatusNotFound)
+			return
+		}
+		cmd = exec.Command("python3", "../samples/python/runner.py", scriptPath)
 	case "docker":
 		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
@@ -79,7 +86,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 				coldStart = e2e - execTime
 			}
 		}
-	case "process", "docker":
+	case "process", "docker", "python":
 		for _, line := range strings.Split(stderrBuf.String(), "\n") {
 			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
 				execTime, _ = strconv.ParseFloat(val, 64)
