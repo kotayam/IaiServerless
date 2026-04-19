@@ -27,8 +27,21 @@ int main(void) {
     size_t code_len = _binary_code_py_end - _binary_code_py_start;
     
     if (code_len > 0) {
+        /* Read stdin into INPUT global before running handler */
+        static char stdin_buf[4096];
+        int stdin_len = 0;
+        long n;
+        while (stdin_len < (int)sizeof(stdin_buf) - 1 &&
+               (n = read(0, stdin_buf + stdin_len,
+                         sizeof(stdin_buf) - 1 - stdin_len)) > 0)
+            stdin_len += (int)n;
+        stdin_buf[stdin_len] = '\0';
+
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
+            /* Expose INPUT as a module-level global */
+            mp_store_global(MP_QSTR_INPUT,
+                mp_obj_new_str(stdin_buf, stdin_len));
             mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
                                                           _binary_code_py_start,
                                                           code_len, 0);
