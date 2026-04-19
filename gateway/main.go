@@ -20,6 +20,24 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
 }
 
+func sourceHandler(w http.ResponseWriter, r *http.Request) {
+	fn := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/source/"))
+	var path string
+	if strings.HasPrefix(fn, "python/") {
+		path = fmt.Sprintf("../samples/%s.py", fn)
+	} else {
+		path = fmt.Sprintf("../samples/%s.c", fn)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(data)
+}
+
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	t0 := time.Now()
 
@@ -123,6 +141,7 @@ func main() {
 	flag.Parse()
 	port := fmt.Sprintf(":%s", *portFlag)
 
+	http.HandleFunc("/source/", sourceHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			staticHandler(w, r)

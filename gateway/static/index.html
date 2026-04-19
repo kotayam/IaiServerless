@@ -42,6 +42,10 @@
   .status.done { color: #98c379; }
   .status.err { color: #e06c75; }
 
+  .source-panel { margin-top: 24px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 20px; }
+  .source-panel h3 { font-size: 0.85rem; color: #888; margin-bottom: 12px; }
+  .source-panel pre { font-size: 0.78rem; color: #ccc; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; margin: 0; }
+
   optgroup { color: #888; }
 </style>
 </head>
@@ -105,6 +109,11 @@
     <div class="bar-wrap"><div class="bar" id="docker-bar"></div></div>
     <div class="response empty" id="docker-body">output will appear here</div>
   </div>
+</div>
+
+<div class="source-panel" id="sourcePanel" style="display:none">
+  <h3 id="sourceLabel">source</h3>
+  <pre id="sourceCode"></pre>
 </div>
 
 <script>
@@ -219,6 +228,16 @@ async function runAll() {
   });
 
   btn.disabled = false;
+
+  // Fetch and display source code
+  try {
+    const src = await fetch(`http://localhost:8081/source/${fn}`);
+    if (src.ok) {
+      document.getElementById('sourceLabel').textContent = `source: ${fn}`;
+      document.getElementById('sourceCode').textContent = await src.text();
+      document.getElementById('sourcePanel').style.display = 'block';
+    }
+  } catch(e) {}
 }
 </script>
 </body>
