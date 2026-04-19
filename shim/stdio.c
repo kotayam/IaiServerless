@@ -1,6 +1,13 @@
 #include "unistd.h"
+#include "stdio.h"
 #include <stdarg.h>
 #include <stddef.h>
+
+// Dummy FILE structures for stdout/stderr
+static FILE _stdout = {1};
+static FILE _stderr = {2};
+FILE *stdout = &_stdout;
+FILE *stderr = &_stderr;
 
 static void format_num(char **buf, size_t *remaining, long long num, int base,
                        int width, int zero_pad) {
@@ -163,4 +170,18 @@ int putchar(int c) {
   char ch = (char)c;
   write(1, &ch, 1);
   return c;
+}
+
+int putc(int c, FILE *stream) {
+  // Validate stream pointer
+  if (!stream || (stream != stdout && stream != stderr))
+    return -1;
+  
+  char ch = (char)c;
+  write(stream->fd, &ch, 1);
+  return c;
+}
+
+int fputc(int c, FILE *stream) {
+  return putc(c, stream);
 }
