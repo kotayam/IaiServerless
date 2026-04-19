@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "py/compile.h"
 #include "py/runtime.h"
 #include "py/gc.h"
 #include "py/mperrno.h"
 #include "py/frozenmod.h"
+#include "py/lexer.h"
 
 // Heap for MicroPython GC
 static char heap[MICROPY_HEAP_SIZE];
@@ -17,8 +19,14 @@ int main(void) {
     // Initialize MicroPython
     mp_init();
 
-    // Simple test - print message
-    printf("MicroPython initialized on IaiServerless\n");
+    // Execute Python code
+    const char *code = "print('Hello from Python!'); result = 2 + 3; print('Result:', result)";
+    
+    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, code, strlen(code), 0);
+    qstr source_name = lex->source_name;
+    mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+    mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
+    mp_call_function_0(module_fun);
 
     // Clean up
     mp_deinit();
@@ -54,3 +62,7 @@ void __assert_fail(const char *expr, const char *file, unsigned int line, const 
 void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {
     write(1, str, len);
 }
+
+// Required: Frozen module support (empty for now)
+const char mp_frozen_names[] = {0};
+const uint32_t mp_frozen_mpy_content[] = {0};

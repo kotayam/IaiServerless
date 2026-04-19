@@ -15,13 +15,13 @@ typedef long ssize_t;
 
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_MINIMUM)
 
-// Disable compiler - we only run frozen modules
-#define MICROPY_ENABLE_COMPILER     (0)
+// Enable compiler for bytecode execution
+#define MICROPY_ENABLE_COMPILER     (1)
 
 #define MICROPY_QSTR_EXTRA_POOL           (mp_qstr_const_pool)
 #define MICROPY_ENABLE_GC                 (1)
 #define MICROPY_HELPER_REPL               (0)
-#define MICROPY_MODULE_FROZEN_MPY         (0)
+#define MICROPY_MODULE_FROZEN_MPY         (1)
 #define MICROPY_ENABLE_EXTERNAL_IMPORT    (0)
 
 // Disable filesystem
