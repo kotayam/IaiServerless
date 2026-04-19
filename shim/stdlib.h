@@ -14,4 +14,7 @@ void exit(int status) __attribute__((noreturn));
 int atoi(const char *s);
 long strtol(const char *s, char **endptr, int base);
 
+// alloca - stack allocation (compiler builtin)
+#define alloca(size) __builtin_alloca(size)
+
 #endif /* SHIM_STDLIB_H */
