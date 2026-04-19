@@ -37,9 +37,9 @@ IaiServerless is a unikernel-based serverless runtime that executes functions in
 - **Memory Model**: Freestanding (no OS, no libc)
 
 ## Current Branch: add-python-support
-Working on porting MicroPython to run as a unikernel on IaiServerless.
+Python support is complete and benchmarked.
 
-**Status (2026-04-19): MicroPython port complete and working.**
+**Status (2026-04-19): All Python tasks done. No active tasks.**
 
 ### What's Done
 - MicroPython runs as a freestanding unikernel linked against `libshim.a`
@@ -50,6 +50,18 @@ Working on porting MicroPython to run as a unikernel on IaiServerless.
 - `% string formatting` enabled (`MICROPY_PY_BUILTINS_STR_OP_MODULO`)
 - Sample functions: `hello.py`, `prime.py`, `weather.py` (live HTTP to open-meteo.com)
 - Build system: `samples/python/Makefile` + `build.sh`, hooked into root `make`
+- Dockerfile for Python samples (`python:3.11-slim`)
+- Python process runtime support in gateway (`python` runtime mode)
+- Benchmark extended with `python/hello`, `python/prime`, `python/weather`
+
+### Benchmark Results (2026-04-19, 30 requests each)
+| Function       | KVM cold start | Python process cold start | Docker cold start |
+|----------------|---------------|--------------------------|-------------------|
+| python/hello   | 18.9 ms       | 41.0 ms                  | 162.3 ms          |
+| python/prime   | 18.5 ms       | 42.2 ms                  | 169.7 ms          |
+| python/weather | 25.0 ms       | 45.0 ms                  | 175.1 ms          |
+
+KVM cold start beats native `python3` process launch. Execution times are near-identical across runtimes (network-bound for weather.py at ~340ms).
 
 ### Python Coding Constraints (ROM_LEVEL_MINIMUM)
 - No `str.encode()` / `bytes.decode()` — use `bytes("...", "utf-8")` and `str(b, "utf-8")`
