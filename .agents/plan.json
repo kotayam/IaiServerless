@@ -1,0 +1,162 @@
+{
+  "active_tasks": [
+    {
+      "id": "python-shim-functions",
+      "title": "Add missing shim functions for MicroPython compatibility",
+      "status": "in_progress",
+      "priority": "high",
+      "description": "Implement missing C library functions required by MicroPython runtime",
+      "subtasks": [
+        {
+          "name": "stdlib.h additions",
+          "status": "pending",
+          "items": [
+            "realloc() - for GC and list resizing",
+            "abort() - fatal error handler",
+            "exit() - interpreter shutdown",
+            "atoi() - string to int conversion",
+            "strtol() - string to long with base support"
+          ]
+        },
+        {
+          "name": "stdio.h implementation",
+          "status": "pending",
+          "items": [
+            "snprintf() - string formatting (critical for Python)",
+            "printf() - wrapper over write()",
+            "putchar() - single char output"
+          ]
+        },
+        {
+          "name": "setjmp.h implementation",
+          "status": "pending",
+          "items": [
+            "setjmp() - save execution context",
+            "longjmp() - restore execution context (needed for Python exceptions)"
+          ]
+        },
+        {
+          "name": "Test new shim functions",
+          "status": "pending",
+          "items": [
+            "Create test_stdlib.c for realloc, abort, exit, atoi, strtol",
+            "Create test_stdio.c for printf, snprintf, putchar",
+            "Create test_setjmp.c for setjmp/longjmp"
+          ]
+        }
+      ],
+      "files_involved": [
+        "shim/stdlib.h",
+        "shim/stdlib.c",
+        "shim/stdio.h",
+        "shim/stdio.c",
+        "shim/setjmp.h",
+        "shim/setjmp.S",
+        "shim/Makefile",
+        "samples/c/test_stdlib.c",
+        "samples/c/test_stdio.c",
+        "samples/c/test_setjmp.c"
+      ],
+      "notes": [
+        "String functions (strcmp, strchr, etc.) already complete in string.c",
+        "memmove and memcmp already implemented",
+        "Math functions (floor, ceil, pow, sqrt) can be skipped by disabling float support in MicroPython",
+        "strtod can be stubbed if float support is disabled"
+      ]
+    }
+  ],
+  "backlog": [
+    {
+      "id": "micropython-port",
+      "title": "Port MicroPython minimal to IaiServerless",
+      "priority": "high",
+      "description": "Compile MicroPython as freestanding binary linked against shim",
+      "dependencies": ["python-shim-functions"],
+      "subtasks": [
+        "Clone MicroPython repository",
+        "Create custom mpconfigport.h (disable filesystem, REPL, float, threading)",
+        "Modify ports/minimal for IaiServerless",
+        "Link MicroPython against libshim.a with link.ld",
+        "Test basic Python execution"
+      ]
+    },
+    {
+      "id": "python-frozen-modules",
+      "title": "Implement frozen module support",
+      "priority": "high",
+      "description": "Compile Python functions into binary using mpy-cross",
+      "dependencies": ["micropython-port"],
+      "subtasks": [
+        "Set up mpy-cross build",
+        "Create sample Python serverless function",
+        "Freeze Python module into MicroPython binary",
+        "Test frozen module execution"
+      ]
+    },
+    {
+      "id": "python-gateway-integration",
+      "title": "Add Python runtime support to gateway",
+      "priority": "medium",
+      "description": "Extend gateway to support Python functions alongside C/C++",
+      "dependencies": ["python-frozen-modules"],
+      "subtasks": [
+        "Add python/ directory to samples",
+        "Update gateway to recognize .py functions",
+        "Build Python functions as .elf binaries",
+        "Add Python functions to benchmark suite"
+      ]
+    },
+    {
+      "id": "python-http-support",
+      "title": "Add HTTP request/response handling for Python",
+      "priority": "medium",
+      "description": "Enable Python functions to parse HTTP requests and generate responses",
+      "dependencies": ["python-frozen-modules"],
+      "subtasks": [
+        "Implement minimal HTTP parser in Python",
+        "Add request object to frozen module context",
+        "Test with sample HTTP handler function"
+      ]
+    },
+    {
+      "id": "optimize-cold-start",
+      "title": "Optimize Python cold start performance",
+      "priority": "low",
+      "description": "Profile and optimize MicroPython initialization time",
+      "dependencies": ["python-gateway-integration"],
+      "subtasks": [
+        "Measure baseline cold start time",
+        "Profile MicroPython initialization",
+        "Optimize GC and memory allocation",
+        "Compare with C function cold start"
+      ]
+    },
+    {
+      "id": "documentation",
+      "title": "Document Python runtime usage",
+      "priority": "low",
+      "description": "Add documentation for writing and deploying Python functions",
+      "dependencies": ["python-gateway-integration"],
+      "subtasks": [
+        "Update README.md with Python examples",
+        "Document mpconfigport.h configuration",
+        "Add Python function development guide",
+        "Document limitations and best practices"
+      ]
+    }
+  ],
+  "completed_tasks": [
+    {
+      "id": "string-test",
+      "title": "Add test for string.h functions",
+      "completed_date": "2026-04-19",
+      "description": "Created test_string.c to validate all string.h implementations"
+    }
+  ],
+  "notes": [
+    "Currently on add-python-support branch",
+    "MicroPython approach chosen over CPython for bare-metal compatibility",
+    "No filesystem needed - Python code will be frozen into binary",
+    "Float support optional - can be disabled to reduce dependencies"
+  ]
+}
