@@ -21,7 +21,7 @@ include $(TOP)/extmod/extmod.mk
 CC = gcc
 LD = ld
 CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
-CFLAGS += -I. -I$(TOP) -I$(BUILD)
+CFLAGS += -I$(SHIM_DIR) -I. -I$(TOP) -I$(BUILD)
 
 # Linker settings - use shim's linker script
 LDFLAGS = -T $(SHIM_DIR)/link.ld
