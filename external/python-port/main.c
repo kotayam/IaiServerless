@@ -46,15 +46,11 @@ void __assert_func(const char *file, int line, const char *func, const char *exp
 
 // Alias for glibc assert
 void __assert_fail(const char *expr, const char *file, unsigned int line, const char *func) {
-    __assert_func(file, line, func, expr);
+    printf("Assertion '%s' failed, at file %s:%u\n", expr, file, line);
+    exit(1);
 }
 
 // Required: HAL stdout function
 void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {
     write(1, str, len);
 }
-
-// Required: Frozen module stubs (no frozen modules yet)
-const char mp_frozen_names[] = {0};
-const uint32_t mp_frozen_mpy_content[] = {0};
-const mp_frozen_module_t mp_qstr_frozen_const_pool = {0};
