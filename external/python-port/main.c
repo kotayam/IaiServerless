@@ -27,21 +27,8 @@ int main(void) {
     size_t code_len = _binary_code_py_end - _binary_code_py_start;
     
     if (code_len > 0) {
-        /* Read stdin into INPUT global before running handler */
-        static char stdin_buf[4096];
-        int stdin_len = 0;
-        long n;
-        while (stdin_len < (int)sizeof(stdin_buf) - 1 &&
-               (n = read(0, stdin_buf + stdin_len,
-                         sizeof(stdin_buf) - 1 - stdin_len)) > 0)
-            stdin_len += (int)n;
-        stdin_buf[stdin_len] = '\0';
-
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
-            /* Expose INPUT as a module-level global */
-            mp_store_global(MP_QSTR_INPUT,
-                mp_obj_new_str(stdin_buf, stdin_len));
             mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
                                                           _binary_code_py_start,
                                                           code_len, 0);
@@ -103,6 +90,24 @@ void __assert_fail(const char *expr, const char *file, unsigned int line, const 
 // Required: HAL stdout function
 void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {
     write(1, str, len);
+}
+
+// Required: HAL stdin function for input() builtin
+int mp_hal_stdin_rx_chr(void) {
+    unsigned char c;
+    long n = read(0, &c, 1);
+    return (n == 1) ? c : -1;
+}
+
+// readline implementation for input() — reads until newline or EOF
+#include "py/misc.h"
+int mp_iai_readline(vstr_t *line, const char *prompt) {
+    (void)prompt;
+    vstr_reset(line);
+    int c;
+    while ((c = mp_hal_stdin_rx_chr()) >= 0 && c != '\n')
+        vstr_add_byte(line, (byte)c);
+    return 0;
 }
 
 // Required: Frozen module support (empty for now)
