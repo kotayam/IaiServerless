@@ -60,6 +60,7 @@
       <option value="c/hello">c/hello</option>
       <option value="c/prime">c/prime</option>
       <option value="c/weather">c/weather 🌐</option>
+      <option value="c/weather_fmt">c/weather_fmt 🌐🔗</option>
       <option value="c/json_builder">c/json_builder</option>
       <option value="c/alloc_stress">c/alloc_stress</option>
     </optgroup>
@@ -185,8 +186,13 @@ function resetCol(id) {
 async function fetchRuntime(id, port, fn) {
   setStatus(id, 'running', 'running…');
   const t0 = performance.now();
+  // c/weather_fmt needs the gateway port so it can call back to weather_parser
+  const isWeather = fn === 'c/weather_fmt';
   try {
-    const resp = await fetch(`http://localhost:${port}/${fn}`);
+    const resp = await fetch(`http://localhost:${port}/${fn}`, {
+      method: isWeather ? 'POST' : 'GET',
+      body: isWeather ? String(port) : undefined,
+    });
     const e2e = performance.now() - t0;
     const cold = parseFloat(resp.headers.get('X-Cold-Start') || 0);
     const exec = parseFloat(resp.headers.get('X-Exec-Time') || 0);
