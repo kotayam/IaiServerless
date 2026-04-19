@@ -1,5 +1,39 @@
 {
-  "active_tasks": [],
+  "active_tasks": [
+    {
+      "id": "demo-ui",
+      "title": "Build interactive demo UI",
+      "status": "pending",
+      "priority": "high",
+      "description": "A single-page demo that fires the same function request to 3 gateway instances (process/python, kvm, docker) in parallel and visualizes latency differences in real time",
+      "dependencies": [],
+      "subtasks": [
+        {
+          "name": "Add static file handler to gateway",
+          "status": "pending",
+          "notes": "In main.go, serve gateway/static/index.html on GET /. Current invokeHandler catches all routes including /; need to split: serve static on exact '/', dispatch functions on everything else. Also add CORS headers so the browser can call all 3 ports from one origin."
+        },
+        {
+          "name": "Create gateway/static/index.html",
+          "status": "pending",
+          "notes": "Single HTML file (no build toolchain). Three columns: process/python | kvm | docker. Function selector dropdown (c/hello, c/prime, c/weather, c/alloc_stress, python/hello, python/prime, python/weather, python/alloc_stress). Run button fires parallel fetch() to ports 8081/8082/8083. Each column shows: cold start, exec time, e2e latency (from response headers), and truncated response body. Columns populate as responses arrive so the speed difference is visually apparent."
+        },
+        {
+          "name": "Create scripts/demo.sh",
+          "status": "pending",
+          "notes": "Build gateway binary once. Start 3 instances: port 8081 runtime=process (or python for python/* functions — need to handle mixed), port 8082 runtime=kvm, port 8083 runtime=docker. Trap SIGINT to kill all 3 on exit. Print URLs. Note: process runtime doesn't support python/* and python runtime doesn't support c/* — UI should select correct port based on function prefix, or run 4 gateways (process:8081, python:8082, kvm:8083, docker:8084)."
+        }
+      ],
+      "files_to_create": [
+        "gateway/static/index.html",
+        "scripts/demo.sh"
+      ],
+      "files_to_modify": [
+        "gateway/main.go"
+      ],
+      "open_questions": []
+    }
+  ],
   "backlog": [
     {
       "id": "python-gateway-integration",
