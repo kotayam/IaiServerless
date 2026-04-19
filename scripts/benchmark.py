@@ -6,10 +6,11 @@ import sys
 import os
 import statistics
 import signal
+import argparse
 
-GATEWAY_URL = "http://localhost:8080"
+GATEWAY_PORT = 8080
 RUNTIMES = ["process", "kvm", "docker"]
-SAMPLES = ["hello", "prime", "net_query", "weather"]
+SAMPLES = ["c/hello", "c/prime", "c/net_query", "c/weather", "c/json_builder"]
 
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
@@ -18,12 +19,12 @@ class BenchmarkResult:
         self.exec_time = exec_time
         self.e2e_latency = e2e_latency
 
-def start_gateway(runtime):
+def start_gateway(runtime, port):
     print(f"[*] Starting Gateway with runtime: {runtime}")
     # Run 'go build' first to ensure we aren't measuring compilation time
     subprocess.run(["go", "build", "-o", "gateway_bin", "main.go"], cwd="gateway", check=True)
     
-    cmd = ["./gateway_bin", f"-runtime={runtime}"]
+    cmd = ["./gateway_bin", f"-runtime={runtime}", f"-port={port}"]
     process = subprocess.Popen(cmd, cwd="gateway", stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     # Wait for gateway to be ready
@@ -76,9 +77,14 @@ def run_benchmark(sample, num_requests):
     return results
 
 def main():
-    num_req = 30
-    if len(sys.argv) > 1:
-        num_req = int(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("num_requests", nargs="?", type=int, default=30)
+    parser.add_argument("--port", type=int, default=GATEWAY_PORT)
+    args = parser.parse_args()
+
+    global GATEWAY_URL
+    GATEWAY_URL = f"http://localhost:{args.port}"
+    num_req = args.num_requests
 
     # Ensure everything is built
     print("[*] Preparing binaries and Docker images...")
@@ -91,7 +97,7 @@ def main():
     final_report = {}
 
     for rt in RUNTIMES:
-        gw_proc = start_gateway(rt)
+        gw_proc = start_gateway(rt, args.port)
         final_report[rt] = {}
         
         for sample in SAMPLES:
