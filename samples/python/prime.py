@@ -1,7 +1,17 @@
+def isqrt(n):
+    if n < 0:
+        return 0
+    x = n
+    y = (x + 1) // 2
+    while y < x:
+        x = y
+        y = (x + n // x) // 2
+    return x
+
 def is_prime(n):
     if n < 2:
         return False
-    for i in range(2, int(n ** 0.5) + 1):
+    for i in range(2, isqrt(n) + 1):
         if n % i == 0:
             return False
     return True
