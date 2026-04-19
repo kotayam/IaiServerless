@@ -20,7 +20,7 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
 }
 
-
+func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	t0 := time.Now()
 
 	// extract function name
