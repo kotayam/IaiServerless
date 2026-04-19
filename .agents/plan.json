@@ -3,25 +3,30 @@
     {
       "id": "demo-ui",
       "title": "Build interactive demo UI",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "description": "A single-page demo that fires the same function request to 3 gateway instances (process/python, kvm, docker) in parallel and visualizes latency differences in real time",
       "dependencies": [],
       "subtasks": [
         {
           "name": "Add static file handler to gateway",
-          "status": "pending",
-          "notes": "In main.go, serve gateway/static/index.html on GET /. Current invokeHandler catches all routes including /; need to split: serve static on exact '/', dispatch functions on everything else. Also add CORS headers so the browser can call all 3 ports from one origin."
+          "status": "done",
+          "notes": "Serves gateway/static/index.html on GET /. CORS headers added to all function responses."
         },
         {
           "name": "Create gateway/static/index.html",
-          "status": "pending",
-          "notes": "Single HTML file (no build toolchain). Three columns: process/python | kvm | docker. Function selector dropdown (c/hello, c/prime, c/weather, c/alloc_stress, python/hello, python/prime, python/weather, python/alloc_stress). Run button fires parallel fetch() to ports 8081/8082/8083. Each column shows: cold start, exec time, e2e latency (from response headers), and truncated response body. Columns populate as responses arrive so the speed difference is visually apparent."
+          "status": "done",
+          "notes": "3-column UI (native/kvm/docker), function dropdown, parallel fetch, relative latency bars, live timing from response headers."
         },
         {
           "name": "Create scripts/demo.sh",
+          "status": "done",
+          "notes": "4 gateways: process:8081, kvm:8082, docker:8083, python:8084. Builds gateway and samples, traps SIGINT."
+        }
+        {
+          "name": "Add /source/* endpoint to gateway and source panel to UI",
           "status": "pending",
-          "notes": "Build gateway binary once. Start 3 instances: port 8081 runtime=process (or python for python/* functions — need to handle mixed), port 8082 runtime=kvm, port 8083 runtime=docker. Trap SIGINT to kill all 3 on exit. Print URLs. Note: process runtime doesn't support python/* and python runtime doesn't support c/* — UI should select correct port based on function prefix, or run 4 gateways (process:8081, python:8082, kvm:8083, docker:8084)."
+          "notes": "Gateway serves raw source file on GET /source/<fn> (reads ../samples/c/<name>.c or ../samples/python/<name>.py). UI fetches and displays below results with syntax highlight via <pre>."
         }
       ],
       "files_to_create": [
@@ -32,6 +37,63 @@
         "gateway/main.go"
       ],
       "open_questions": []
+    },
+    {
+      "id": "inter-function-calls",
+      "title": "Add stdin/read support for inter-function calls",
+      "status": "pending",
+      "priority": "high",
+      "description": "Enable c/weather to call python/weather_parser via the gateway, passing raw JSON as HTTP request body. Requires read() hypercall and gateway stdin piping.",
+      "dependencies": ["demo-ui"],
+      "subtasks": [
+        {
+          "name": "Add IAI_READ to iai_common.h",
+          "status": "pending",
+          "notes": "Add IAI_READ to the iai_op enum after IAI_GETHOSTBYNAME."
+        },
+        {
+          "name": "Add IAI_READ handler to host/hypercall.c",
+          "status": "pending",
+          "notes": "Identical to IAI_RECV but without flags. args[0]=fd, args[1]=maxlen. Calls read(host_fd, payload, args[1]). guest_to_host_fds[0] already maps to STDIN_FILENO."
+        },
+        {
+          "name": "Add read() to shim/unistd.c and unistd.h",
+          "status": "pending",
+          "notes": "Same pattern as recv(). hypercall(IAI_READ, fd, maxlen, 0, 0, NULL, 0), then memcpy from message_buffer on success."
+        },
+        {
+          "name": "Expose INPUT global in external/python-port/main.c",
+          "status": "pending",
+          "notes": "Before calling handler(), read all of stdin into a buffer. Register as a MicroPython global string 'INPUT' so weather_parser.py can access it."
+        },
+        {
+          "name": "Pipe HTTP request body to cmd stdin in gateway/main.go",
+          "status": "pending",
+          "notes": "Set cmd.Stdin = r.Body so POST body is available to the function via stdin."
+        },
+        {
+          "name": "Implement samples/python/weather_parser.py",
+          "status": "pending",
+          "notes": "Reads INPUT global (raw JSON from open-meteo), extracts temperature/windspeed/weathercode with string search, prints formatted weather string."
+        },
+        {
+          "name": "Update samples/c/weather.c",
+          "status": "pending",
+          "notes": "After fetching JSON from open-meteo, POST it to localhost:<gateway_port>/python/weather_parser and output the response. Port passed as compile-time constant or hardcoded to 8082 (kvm gateway)."
+        }
+      ],
+      "files_to_create": [
+        "samples/python/weather_parser.py"
+      ],
+      "files_to_modify": [
+        "iai_common.h",
+        "host/hypercall.c",
+        "shim/unistd.c",
+        "shim/unistd.h",
+        "external/python-port/main.c",
+        "gateway/main.go",
+        "samples/c/weather.c"
+      ]
     }
   ],
   "backlog": [
