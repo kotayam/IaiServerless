@@ -1,15 +1,19 @@
 import socket
 
-HOST = "open-meteo.com"
-PATH = "/v1/forecast?latitude=35.6895&longitude=139.6917&current_weather=true"
+HOST = "api.open-meteo.com"
+LAT = "35.6895"
+LON = "139.6917"
 
 def handler():
+    path = "/v1/forecast?latitude=%s&longitude=%s&current_weather=true" % (LAT, LON)
+    req = bytes("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" % (path, HOST), "utf-8")
+
     s = socket.socket()
     s.connect((HOST, 80))
-    s.send(b"GET " + PATH.encode() + b" HTTP/1.1\r\nHost: " + HOST.encode() + b"\r\nConnection: close\r\n\r\n")
+    s.send(req)
     while True:
         data = s.recv(1024)
         if data is None:
             break
-        print(data.decode(), end="")
+        print(str(data, "utf-8"), end="")
     s.close()
