@@ -70,7 +70,7 @@ static mp_obj_t socket_recv(mp_obj_t self_in, mp_obj_t len_obj) {
     char buf[1024];
     long n = recv(self->fd, buf, maxlen, 0);
     if (n < 0) mp_raise_OSError(1);
-    if (n == 0) return mp_const_none;
+    if (n == 0) return mp_const_empty_bytes;
     return mp_obj_new_bytes((const byte *)buf, (size_t)n);
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(socket_recv_obj, socket_recv);

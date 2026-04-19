@@ -19,6 +19,7 @@ proc:
 docker-all:
 	$(MAKE) -C c docker-all
 	$(MAKE) -C cpp docker-all
+	$(MAKE) -C python docker-all
 
 clean:
 	$(MAKE) -C c clean

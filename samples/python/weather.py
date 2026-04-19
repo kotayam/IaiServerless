@@ -13,7 +13,7 @@ def handler():
     s.send(req)
     while True:
         data = s.recv(1024)
-        if data is None:
+        if not data:
             break
         print(str(data, "utf-8"), end="")
     s.close()

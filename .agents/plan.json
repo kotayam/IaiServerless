@@ -6,7 +6,7 @@
       "title": "Add Python runtime support to gateway",
       "priority": "medium",
       "description": "Extend gateway to support Python functions alongside C/C++",
-      "dependencies": [],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Update gateway to recognize python/ sample directory",
         "Add Python functions to benchmark suite"
@@ -29,7 +29,7 @@
       "title": "Optimize Python cold start performance",
       "priority": "low",
       "description": "Profile and optimize MicroPython initialization time",
-      "dependencies": ["python-gateway-integration"],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Measure baseline cold start time",
         "Profile MicroPython initialization",
@@ -42,7 +42,7 @@
       "title": "Document Python runtime usage",
       "priority": "low",
       "description": "Add documentation for writing and deploying Python functions",
-      "dependencies": ["python-gateway-integration"],
+      "dependencies": ["python-benchmark"],
       "subtasks": [
         "Update README.md with Python examples",
         "Document mpconfigport.h configuration",
@@ -52,6 +52,19 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "python-benchmark",
+      "title": "Extend benchmark to include Python samples",
+      "completed_date": "2026-04-19",
+      "description": "Added Python functions to the benchmark suite across all three runtimes (kvm, python process, docker)",
+      "deliverables": [
+        "samples/python/Dockerfile: python:3.11-slim image with ARG SOURCE",
+        "samples/python/Makefile: proc and docker-all targets",
+        "gateway: python process runtime support",
+        "scripts/benchmark.py: python/hello, python/prime, python/weather added",
+        "Benchmark verified: KVM ~19-25ms cold start, beats native python3 process (~41-45ms)"
+      ]
+    },
     {
       "id": "python-shim-functions",
       "title": "Add missing shim functions for MicroPython compatibility",
