@@ -1,0 +1,110 @@
+{
+  "active_tasks": [],
+  "backlog": [
+    {
+      "id": "python-gateway-integration",
+      "title": "Add Python runtime support to gateway",
+      "priority": "medium",
+      "description": "Extend gateway to support Python functions alongside C/C++",
+      "dependencies": [],
+      "subtasks": [
+        "Update gateway to recognize python/ sample directory",
+        "Add Python functions to benchmark suite"
+      ]
+    },
+    {
+      "id": "python-http-support",
+      "title": "Add HTTP request/response handling for Python",
+      "priority": "medium",
+      "description": "Enable Python functions to parse HTTP requests and generate responses",
+      "dependencies": [],
+      "subtasks": [
+        "Implement minimal HTTP parser in Python",
+        "Add request object to frozen module context",
+        "Test with sample HTTP handler function"
+      ]
+    },
+    {
+      "id": "optimize-cold-start",
+      "title": "Optimize Python cold start performance",
+      "priority": "low",
+      "description": "Profile and optimize MicroPython initialization time",
+      "dependencies": ["python-gateway-integration"],
+      "subtasks": [
+        "Measure baseline cold start time",
+        "Profile MicroPython initialization",
+        "Optimize GC and memory allocation",
+        "Compare with C function cold start"
+      ]
+    },
+    {
+      "id": "documentation",
+      "title": "Document Python runtime usage",
+      "priority": "low",
+      "description": "Add documentation for writing and deploying Python functions",
+      "dependencies": ["python-gateway-integration"],
+      "subtasks": [
+        "Update README.md with Python examples",
+        "Document mpconfigport.h configuration",
+        "Add Python function development guide",
+        "Document limitations and best practices"
+      ]
+    }
+  ],
+  "completed_tasks": [
+    {
+      "id": "python-shim-functions",
+      "title": "Add missing shim functions for MicroPython compatibility",
+      "completed_date": "2026-04-19",
+      "description": "Implemented all required C library functions for MicroPython runtime",
+      "deliverables": [
+        "stdlib.h/c: realloc, abort, exit, atoi, strtol with __isoc23_strtol alias",
+        "stdio.h/c: printf, snprintf, vsnprintf, putchar, putc, fputc with FILE/stdout/stderr",
+        "setjmp.h/S: setjmp, longjmp, _setjmp for exception handling",
+        "Security hardening: bounds checking, overflow protection, pointer validation",
+        "Tests: test_stdlib.c, test_stdio.c, test_setjmp.c - all passing"
+      ]
+    },
+    {
+      "id": "string-test",
+      "title": "Add test for string.h functions",
+      "completed_date": "2026-04-19",
+      "description": "Created test_string.c to validate all string.h implementations"
+    },
+    {
+      "id": "micropython-port",
+      "title": "Port MicroPython minimal to IaiServerless",
+      "completed_date": "2026-04-19",
+      "description": "MicroPython running as freestanding unikernel linked against shim",
+      "deliverables": [
+        "external/python-port/: mpconfigport.h, main.c, Makefile, modsocket.c",
+        "shim/netdb.h: added missing header for gethostbyname/hostent",
+        "modsocket.c: socket module registered as 'socket' with standard Python interface",
+        "NLR exception handling in main.c with mp_obj_print_exception for error output",
+        "MICROPY_ENABLE_EXTERNAL_IMPORT + mp_import_stat/mp_lexer_new_from_file stubs",
+        "MICROPY_PY_BUILTINS_STR_OP_MODULO enabled for % string formatting"
+      ]
+    },
+    {
+      "id": "python-samples",
+      "title": "Add Python sample functions",
+      "completed_date": "2026-04-19",
+      "description": "Sample Python serverless functions built via objcopy embedding",
+      "deliverables": [
+        "samples/python/hello.py: basic hello world with handler()",
+        "samples/python/prime.py: prime sieve using integer sqrt (no float)",
+        "samples/python/weather.py: live HTTP GET to open-meteo.com API",
+        "samples/python/build.sh: embeds .py into MicroPython ELF via objcopy",
+        "samples/python/Makefile: builds all .py files, hooked into samples/Makefile"
+      ]
+    }
+  ],
+  "notes": [
+    "Currently on add-python-support branch",
+    "Python code embedded into ELF via objcopy, executed from _binary_code_py_start",
+    "socket module backed by shim hypercalls - standard import socket works",
+    "Float disabled - use integer arithmetic (isqrt pattern for prime)",
+    "str.encode()/decode() unavailable at ROM_LEVEL_MINIMUM - use bytes() and str() constructors",
+    "% string formatting enabled via MICROPY_PY_BUILTINS_STR_OP_MODULO"
+  ]
+}

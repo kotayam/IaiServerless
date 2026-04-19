@@ -1,0 +1,54 @@
+#include <stdint.h>
+
+// Define ssize_t for MicroPython
+typedef long ssize_t;
+
+// Define alloca
+#define alloca(size) __builtin_alloca(size)
+
+// Define SEEK constants
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
+// Minimal MicroPython configuration for IaiServerless unikernel
+
+#define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_MINIMUM)
+
+// Enable compiler for bytecode execution
+#define MICROPY_ENABLE_COMPILER     (1)
+
+#define MICROPY_QSTR_EXTRA_POOL           (mp_qstr_const_pool)
+#define MICROPY_ENABLE_GC                 (1)
+#define MICROPY_HELPER_REPL               (0)
+#define MICROPY_MODULE_FROZEN_MPY         (1)
+#define MICROPY_ENABLE_EXTERNAL_IMPORT    (1)
+
+// Disable filesystem
+#define MICROPY_VFS                       (0)
+#define MICROPY_PY_IO                     (0)
+
+// Disable float support
+#define MICROPY_FLOAT_IMPL                (MICROPY_FLOAT_IMPL_NONE)
+
+// Enable % string formatting
+#define MICROPY_PY_BUILTINS_STR_OP_MODULO (1)
+
+// Disable threading
+#define MICROPY_PY_THREAD                 (0)
+
+// Disable sys module features
+#define MICROPY_PY_SYS_MODULES            (0)
+#define MICROPY_PY_SYS_EXIT               (0)
+#define MICROPY_PY_SYS_PATH               (0)
+#define MICROPY_PY_SYS_ARGV               (0)
+
+// Minimal heap for serverless functions
+#define MICROPY_HEAP_SIZE                 (64 * 1024)  // 64KB
+
+typedef long mp_off_t;
+
+#define MICROPY_HW_BOARD_NAME "iaiserverless"
+#define MICROPY_HW_MCU_NAME "x86_64-kvm"
+
+#define MP_STATE_PORT MP_STATE_VM

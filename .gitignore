@@ -12,3 +12,6 @@ gateway/gateway_bin
 
 # samples
 samples/c/*_proc
+
+# external
+external/python-port/build

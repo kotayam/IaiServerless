@@ -113,3 +113,99 @@ void free(void *ptr) {
 
   block->free = 1;
 }
+
+void *realloc(void *ptr, size_t size) {
+  if (!ptr)
+    return malloc(size);
+  if (size == 0) {
+    free(ptr);
+    return NULL;
+  }
+
+  struct block *block = (struct block *)ptr - 1;
+  if (block->magic != BLOCK_MAGIC)
+    return NULL;
+
+  if (block->size >= size)
+    return ptr;
+
+  void *new_ptr = malloc(size);
+  if (!new_ptr)
+    return NULL;
+
+  size_t copy_size = block->size < size ? block->size : size;
+  char *dst = new_ptr, *src = ptr;
+  for (size_t i = 0; i < copy_size; i++)
+    dst[i] = src[i];
+
+  free(ptr);
+  return new_ptr;
+}
+
+void abort(void) {
+  asm volatile("hlt");
+  __builtin_unreachable();
+}
+
+void exit(int status) {
+  (void)status;
+  asm volatile("hlt");
+  __builtin_unreachable();
+}
+
+int atoi(const char *s) {
+  int n = 0, neg = 0;
+  while (*s == ' ' || *s == '\t')
+    s++;
+  if (*s == '-') {
+    neg = 1;
+    s++;
+  } else if (*s == '+')
+    s++;
+  while (*s >= '0' && *s <= '9')
+    n = n * 10 + (*s++ - '0');
+  return neg ? -n : n;
+}
+
+long strtol(const char *s, char **endptr, int base) {
+  long n = 0, neg = 0;
+  while (*s == ' ' || *s == '\t')
+    s++;
+  if (*s == '-') {
+    neg = 1;
+    s++;
+  } else if (*s == '+')
+    s++;
+  if (base == 0) {
+    if (*s == '0' && (s[1] == 'x' || s[1] == 'X')) {
+      base = 16;
+      s += 2;
+    } else if (*s == '0') {
+      base = 8;
+      s++;
+    } else
+      base = 10;
+  }
+  while (*s) {
+    int digit;
+    if (*s >= '0' && *s <= '9')
+      digit = *s - '0';
+    else if (*s >= 'a' && *s <= 'z')
+      digit = *s - 'a' + 10;
+    else if (*s >= 'A' && *s <= 'Z')
+      digit = *s - 'A' + 10;
+    else
+      break;
+    if (digit >= base)
+      break;
+    n = n * base + digit;
+    s++;
+  }
+  if (endptr)
+    *endptr = (char *)s;
+  return neg ? -n : n;
+}
+
+// Alias for newer glibc versions
+long __isoc23_strtol(const char *s, char **endptr, int base)
+    __attribute__((alias("strtol")));

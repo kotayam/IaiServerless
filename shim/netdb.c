@@ -1,5 +1,6 @@
 #include "../iai_common.h"
 #include "hypercall.h"
+#include "netdb.h"
 #include "string.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -29,14 +30,6 @@ int gethostbyname_r(const char *name, uint32_t *addr) {
   }
   return (int)ret;
 }
-
-struct hostent {
-  char *h_name;
-  char **h_aliases;
-  int h_addrtype;
-  int h_length;
-  char **h_addr_list;
-};
 
 struct hostent *gethostbyname(const char *name) {
   static uint32_t addr;
