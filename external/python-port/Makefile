@@ -35,6 +35,11 @@ SRC_C = main.c
 
 OBJ = $(PY_CORE_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
+# Allow external object files to be linked in (for embedded Python code)
+ifdef EXTRA_OBJ
+OBJ += $(EXTRA_OBJ)
+endif
+
 # Output
 PROG = micropython.elf
 

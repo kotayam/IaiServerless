@@ -19,14 +19,31 @@ int main(void) {
     // Initialize MicroPython
     mp_init();
 
-    // Execute Python code
-    const char *code = "print('Hello from Python!'); result = 2 + 3; print('Result:', result)";
+    // Read Python code from stdin (embedded in ELF as data section)
+    extern char _binary_code_py_start[];
+    extern char _binary_code_py_end[];
     
-    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, code, strlen(code), 0);
-    qstr source_name = lex->source_name;
-    mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
-    mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
-    mp_call_function_0(module_fun);
+    size_t code_len = _binary_code_py_end - _binary_code_py_start;
+    
+    if (code_len > 0) {
+        // Execute Python code - it should define a handler() function
+        mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, 
+                                                      _binary_code_py_start, 
+                                                      code_len, 0);
+        qstr source_name = lex->source_name;
+        mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+        mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
+        
+        // Execute module to define functions
+        mp_call_function_0(module_fun);
+        
+        // Try to call handler() if it exists
+        mp_obj_t handler_obj = mp_load_global(MP_QSTR_handler);
+        if (handler_obj != MP_OBJ_NULL) {
+            // Call handler with no arguments for now
+            mp_call_function_0(handler_obj);
+        }
+    }
 
     // Clean up
     mp_deinit();
