@@ -23,7 +23,15 @@ all: $(ELFS)
 %.elf: %.o $(SHIM_START) $(SHIM_LIB)
 	$(LD) $(LDFLAGS) $(SHIM_START) $< $(SHIM_LIB) $(LDLIBS) -o $@
 
+docker-all:
+	@echo "Building Docker images for C++ samples..."
+	@for src in $(SRCS); do \
+		name=$${src%.cpp}; \
+		echo "Building Docker image for $$name..."; \
+		docker build --build-arg SOURCE=$$src -t iai_$$name . ; \
+	done
+
 clean:
 	rm -f *.o *.elf
 
-.PHONY: all clean
+.PHONY: all docker-all clean
