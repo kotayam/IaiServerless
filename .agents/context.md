@@ -39,20 +39,28 @@ IaiServerless is a unikernel-based serverless runtime that executes functions in
 ## Current Branch: add-python-support
 Python support is complete and benchmarked.
 
-**Status (2026-04-19): All Python tasks done. No active tasks.**
+**Status (2026-04-19): Inter-function calls working. Demo UI complete. No active tasks.**
 
 ### What's Done
 - MicroPython runs as a freestanding unikernel linked against `libshim.a`
 - Python source files embedded into ELF via `objcopy` (`_binary_code_py_start`)
-- `socket` module implemented in `external/python-port/modsocket.c`, registered as `socket` — standard `import socket` works
-- `shim/netdb.h` added (was missing)
-- NLR exception handling in `main.c` prints tracebacks instead of silent crash
-- `% string formatting` enabled (`MICROPY_PY_BUILTINS_STR_OP_MODULO`)
-- Sample functions: `hello.py`, `prime.py`, `weather.py` (live HTTP to open-meteo.com)
-- Build system: `samples/python/Makefile` + `build.sh`, hooked into root `make`
-- Dockerfile for Python samples (`python:3.11-slim`)
-- Python process runtime support in gateway (`python` runtime mode)
-- Benchmark extended with `python/hello`, `python/prime`, `python/weather`
+- `socket` module implemented in `external/python-port/modsocket.c` — standard `import socket` works
+- `shim/netdb.h` added; NLR exception handling; `% string formatting` enabled
+- `input()` builtin enabled via `mp_hal_stdin_rx_chr` + `mp_iai_readline`
+- `read()` hypercall added (`IAI_READ`) — guest reads from host stdin via fd 0
+- Gateway pipes `r.Body` to `cmd.Stdin` — functions receive request body via stdin
+- `native` runtime mode: auto-selects `process` for `c/*`, `python3` for `python/*`
+- Sample functions: `hello.py`, `prime.py`, `weather.py`, `alloc_stress.py`, `weather_parser.py`
+- `c/weather_fmt`: fetches open-meteo JSON, POSTs to `python/weather_parser` via gateway (inter-function call demo)
+- Demo UI: `gateway/static/index.html`, `scripts/demo.sh` (native:8081, kvm:8082, docker:8083)
+- Dockerfile and proc targets; benchmark extended with all Python samples
+
+### Python Coding Constraints (ROM_LEVEL_MINIMUM)
+- No `str.encode()`/`bytes.decode()` — use `bytes("...", "utf-8")` and `str(b, "utf-8")`
+- No float — use integer arithmetic
+- No string slicing (`data[i:end]`) — use character-by-character accumulation
+- No `any()`, `enumerate()` builtins
+- `% formatting` and `import socket` and `input()` all work
 
 ### Benchmark Results (2026-04-19, 30 requests each)
 | Function       | KVM cold start | Python process cold start | Docker cold start |

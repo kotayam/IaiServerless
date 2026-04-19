@@ -1,63 +1,5 @@
 {
-  "active_tasks": [
-    {
-      "id": "inter-function-calls",
-      "title": "Add stdin/read support for inter-function calls",
-      "status": "pending",
-      "priority": "high",
-      "description": "Enable c/weather to call python/weather_parser via the gateway, passing raw JSON as HTTP request body. Requires read() hypercall and gateway stdin piping.",
-      "dependencies": ["demo-ui"],
-      "subtasks": [
-        {
-          "name": "Add IAI_READ to iai_common.h",
-          "status": "pending",
-          "notes": "Add IAI_READ to the iai_op enum after IAI_GETHOSTBYNAME."
-        },
-        {
-          "name": "Add IAI_READ handler to host/hypercall.c",
-          "status": "pending",
-          "notes": "Identical to IAI_RECV but without flags. args[0]=fd, args[1]=maxlen. Calls read(host_fd, payload, args[1]). guest_to_host_fds[0] already maps to STDIN_FILENO."
-        },
-        {
-          "name": "Add read() to shim/unistd.c and unistd.h",
-          "status": "pending",
-          "notes": "Same pattern as recv(). hypercall(IAI_READ, fd, maxlen, 0, 0, NULL, 0), then memcpy from message_buffer on success."
-        },
-        {
-          "name": "Expose INPUT global in external/python-port/main.c",
-          "status": "pending",
-          "notes": "Before calling handler(), read all of stdin into a buffer. Register as a MicroPython global string 'INPUT' so weather_parser.py can access it."
-        },
-        {
-          "name": "Pipe HTTP request body to cmd stdin in gateway/main.go",
-          "status": "pending",
-          "notes": "Set cmd.Stdin = r.Body so POST body is available to the function via stdin."
-        },
-        {
-          "name": "Implement samples/python/weather_parser.py",
-          "status": "pending",
-          "notes": "Reads INPUT global (raw JSON from open-meteo), extracts temperature/windspeed/weathercode with string search, prints formatted weather string."
-        },
-        {
-          "name": "Update samples/c/weather.c",
-          "status": "pending",
-          "notes": "After fetching JSON from open-meteo, POST it to localhost:<gateway_port>/python/weather_parser and output the response. Port passed as compile-time constant or hardcoded to 8082 (kvm gateway)."
-        }
-      ],
-      "files_to_create": [
-        "samples/python/weather_parser.py"
-      ],
-      "files_to_modify": [
-        "iai_common.h",
-        "host/hypercall.c",
-        "shim/unistd.c",
-        "shim/unistd.h",
-        "external/python-port/main.c",
-        "gateway/main.go",
-        "samples/c/weather.c"
-      ]
-    }
-  ],
+  "active_tasks": [],
   "backlog": [
     {
       "id": "python-gateway-integration",
@@ -110,6 +52,29 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "inter-function-calls",
+      "title": "Add stdin/read support and inter-function calls",
+      "completed_date": "2026-04-19",
+      "description": "Functions can now read stdin via IAI_READ hypercall. c/weather_fmt calls python/weather_parser via the gateway as a demo of inter-function communication.",
+      "deliverables": [
+        "iai_common.h: IAI_READ added to enum",
+        "host/hypercall.c: IAI_READ handler (read from host fd into payload buffer)",
+        "shim/unistd.c+h: read() backed by IAI_READ hypercall",
+        "external/python-port/main.c: input() enabled via mp_hal_stdin_rx_chr + mp_iai_readline",
+        "external/python-port/mpconfigport.h: MICROPY_PY_BUILTINS_INPUT enabled",
+        "gateway/main.go: cmd.Stdin = r.Body, native runtime mode (c/*→process, python/*→python3)",
+        "samples/c/weather_fmt.c: fetches open-meteo, POSTs JSON to python/weather_parser, reads port from stdin",
+        "samples/python/weather_parser.py: reads JSON via input(), extracts weather fields without slicing (ROM_LEVEL_MINIMUM limitation)",
+        "scripts/demo.sh: reduced to 3 gateways (native:8081, kvm:8082, docker:8083)",
+        "gateway/static/index.html: c/weather_fmt added to dropdown, PORT_MAP simplified"
+      ],
+      "notes": [
+        "String slicing (data[i:end]) is broken at ROM_LEVEL_MINIMUM — use character-by-character accumulation instead",
+        "mp_store_global fails before module execution — input() via HAL is the correct approach",
+        "native runtime auto-selects process/python based on function prefix"
+      ]
+    },
     {
       "id": "demo-ui",
       "title": "Build interactive demo UI",
