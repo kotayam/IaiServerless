@@ -11,8 +11,8 @@ import argparse
 GATEWAY_PORT = 8080
 C_RUNTIMES = ["process", "kvm", "docker"]
 PYTHON_RUNTIMES = ["python", "kvm", "docker"]
-C_SAMPLES = ["c/hello", "c/prime", "c/net_query", "c/weather", "c/json_builder"]
-PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather"]
+C_SAMPLES = ["c/hello", "c/prime", "c/weather", "c/json_builder", "c/alloc_stress", "c/multi_req"]
+PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather", "python/alloc_stress", "python/multi_req"]
 
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
