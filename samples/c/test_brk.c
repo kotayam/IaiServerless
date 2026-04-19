@@ -1,6 +1,4 @@
-long write(int fd, const void *buf, unsigned long count);
-void *sbrk(long increment);
-int brk(void *addr);
+#include <unistd.h>
 
 void print_str(const char *s) {
   unsigned long len = 0;
