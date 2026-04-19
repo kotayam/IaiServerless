@@ -46,6 +46,8 @@ Working on porting MicroPython to run as a unikernel on IaiServerless.
 - ✅ Added setjmp/longjmp for exception handling
 - ✅ All implementations include security hardening (bounds checking, overflow protection)
 - ✅ Created comprehensive tests: test_stdlib.c, test_stdio.c, test_setjmp.c
+- ✅ Added MicroPython as git submodule in external/micropython/
+- 🔄 Created out-of-tree port in external/python-port/ (currently building)
 
 ## Key Design Decisions
 

@@ -3,21 +3,48 @@
     {
       "id": "micropython-port",
       "title": "Port MicroPython minimal to IaiServerless",
-      "status": "ready",
+      "status": "in_progress",
       "priority": "high",
-      "description": "Compile MicroPython as freestanding binary linked against shim - all dependencies complete",
+      "description": "Compile MicroPython as freestanding binary linked against shim - currently building",
       "dependencies": [],
       "subtasks": [
-        "Clone MicroPython repository",
-        "Create custom mpconfigport.h (disable filesystem, REPL, float, threading)",
-        "Modify ports/minimal for IaiServerless",
-        "Link MicroPython against libshim.a with link.ld",
-        "Test basic Python execution"
+        {
+          "name": "Setup MicroPython submodule",
+          "status": "completed",
+          "notes": "Added as git submodule in external/micropython/"
+        },
+        {
+          "name": "Create port structure",
+          "status": "completed",
+          "notes": "Created external/python-port/ with mpconfigport.h, main.c, Makefile"
+        },
+        {
+          "name": "Configure minimal build",
+          "status": "in_progress",
+          "notes": "Disabled compiler, filesystem, float, threading. Heap: 64KB"
+        },
+        {
+          "name": "Link against shim",
+          "status": "in_progress",
+          "notes": "Makefile references shim/libshim.a and link.ld"
+        },
+        {
+          "name": "Test basic execution",
+          "status": "pending"
+        }
+      ],
+      "files_created": [
+        "external/micropython (submodule)",
+        "external/python-port/mpconfigport.h",
+        "external/python-port/mphalport.h",
+        "external/python-port/qstrdefsport.h",
+        "external/python-port/main.c",
+        "external/python-port/Makefile"
       ],
       "next_steps": [
-        "Clone MicroPython repo into project",
-        "Create ports/iaiserverless directory",
-        "Write mpconfigport.h with minimal configuration"
+        "Complete MicroPython build",
+        "Test basic execution with KVM runtime",
+        "Add frozen module support"
       ]
     }
   ],
