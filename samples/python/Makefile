@@ -2,6 +2,7 @@ PY_SRCS = $(wildcard *.py)
 ELFS = $(PY_SRCS:.py=.elf)
 
 .PHONY: all clean
+.SUFFIXES:
 
 all: $(ELFS)
 
