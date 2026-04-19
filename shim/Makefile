@@ -4,9 +4,9 @@ CC = gcc
 AR = ar
 CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
 
-SRCS_C = shim.c
+SRCS_C = shim.c string.c stdlib.c
 SRCS_S = start.S
-OBJS = start.o shim.o
+OBJS = start.o shim.o string.o stdlib.o
 
 all: libshim.a
 
