@@ -1,7 +1,6 @@
 def extract(data, key):
-    start = data.find('"current_weather":{')
-    if start < 0:
-        start = 0
+    i = data.find('"current_weather":{')
+    start = i if i >= 0 else 0
     i = data.find(key, start)
     if i < 0:
         return "?"
@@ -10,11 +9,16 @@ def extract(data, key):
         i = i + 1
     while data[i] == ' ':
         i = i + 1
-    result = ''
-    while data[i] != ',' and data[i] != '}':
-        result = result + data[i]
+    if data[i] == '"':
         i = i + 1
-    return result
+        end = i
+        while data[end] != '"':
+            end = end + 1
+    else:
+        end = i
+        while data[end] != ',' and data[end] != '}':
+            end = end + 1
+    return data[i:end]
 
 def handler():
     data = input()
