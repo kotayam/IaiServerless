@@ -17,9 +17,13 @@ def is_prime(n):
     return True
 
 def handler():
-    # Find primes up to 100
-    primes = [n for n in range(2, 101) if is_prime(n)]
-    print("Primes up to 100:", primes)
-    print("Count:", len(primes))
-    return primes
+    n_str = input()
+    n = 0
+    for c in n_str:
+        if c >= '0' and c <= '9':
+            n = n * 10 + (ord(c) - ord('0'))
+    if n <= 0:
+        n = 100
+    primes = [x for x in range(2, n + 1) if is_prime(x)]
+    print("Primes up to %d: %d found, largest is %d" % (n, len(primes), primes[-1] if primes else 0))
 
