@@ -1,4 +1,8 @@
-# IaiServerless
+<p align="center">
+  <img src="assets/logo.png" alt="IaiServerless" width="180"/>
+</p>
+
+<h1 align="center">IaiServerless</h1>
 
 A unikernel-based serverless runtime that executes functions inside lightweight KVM virtual machines, achieving near-process cold start latency with full VM-level isolation.
 
