@@ -9,6 +9,14 @@ long write(int fd, const void *buf, size_t count) {
   return hypercall(IAI_WRITE, (uint32_t)fd, 0, 0, 0, buf, (uint32_t)count);
 }
 
+long read(int fd, void *buf, size_t count) {
+  long ret = hypercall(IAI_READ, (uint32_t)fd, (uint32_t)count, 0, 0, NULL, 0);
+  if (ret > 0) {
+    memcpy(buf, message_buffer + sizeof(struct iai_req), (size_t)ret);
+  }
+  return ret;
+}
+
 int socket(int domain, int type, int protocol) {
   return (int)hypercall(IAI_SOCKET, (uint32_t)domain, (uint32_t)type,
                         (uint32_t)protocol, 0, NULL, 0);

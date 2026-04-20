@@ -10,10 +10,11 @@
   p.sub { color: #666; font-size: 0.8rem; margin-bottom: 24px; }
 
   .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
-  select, button {
+  select, button, input[type=text] {
     background: #1e1e1e; color: #e0e0e0; border: 1px solid #333;
     padding: 8px 14px; font-family: monospace; font-size: 0.9rem; cursor: pointer;
   }
+  input[type=text] { cursor: text; width: 100px; }
   button { background: #2a6496; border-color: #2a6496; color: #fff; }
   button:hover { background: #3a7ab6; }
   button:disabled { background: #333; border-color: #333; color: #666; cursor: default; }
@@ -55,11 +56,12 @@
 <p class="sub">Unikernel-based serverless runtime — same function, four runtimes, live latency comparison</p>
 
 <div class="controls">
-  <select id="fnSelect">
+  <select id="fnSelect" onchange="onFnChange()">
     <optgroup label="C Functions">
       <option value="c/hello">c/hello</option>
       <option value="c/prime">c/prime</option>
       <option value="c/weather">c/weather 🌐</option>
+      <option value="c/weather_fmt">c/weather_fmt 🌐🔗</option>
       <option value="c/json_builder">c/json_builder</option>
       <option value="c/alloc_stress">c/alloc_stress</option>
     </optgroup>
@@ -67,9 +69,11 @@
       <option value="python/hello">python/hello</option>
       <option value="python/prime">python/prime</option>
       <option value="python/weather">python/weather 🌐</option>
+      <option value="python/weather_fmt">python/weather_fmt 🌐🔗</option>
       <option value="python/alloc_stress">python/alloc_stress</option>
     </optgroup>
   </select>
+  <input type="text" id="fnInput" placeholder="N" style="display:none" />
   <button id="runBtn" onclick="runAll()">▶ Run</button>
 </div>
 
@@ -125,19 +129,25 @@ const RUNTIMES = [
   { id: 'docker', label: 'docker', port: 8083 },
 ];
 
-function getNativePort(fn) {
-  return fn.startsWith('python/') ? 8082 : 8081;
-  // Note: python runtime on 8082 conflicts with kvm on 8082 — see demo.sh
-  // Actually native python is on 8084, kvm on 8082. Corrected below.
+// Port layout (matches demo.sh):
+// 8081 = native (c/* → process, python/* → python3)
+// 8082 = kvm
+// 8083 = docker
+const PRIME_FUNCTIONS = ['c/prime', 'python/prime'];
+
+function onFnChange() {
+  const fn = document.getElementById('fnSelect').value;
+  const inp = document.getElementById('fnInput');
+  if (PRIME_FUNCTIONS.includes(fn)) {
+    inp.style.display = '';
+    inp.placeholder = 'N (default 10000)';
+  } else {
+    inp.style.display = 'none';
+  }
 }
 
-// Port layout (matches demo.sh):
-// 8081 = process (c/*)
-// 8082 = kvm     (c/* and python/*)
-// 8083 = docker  (c/* and python/*)
-// 8084 = python  (python/*)
 const PORT_MAP = {
-  native: fn => fn.startsWith('python/') ? 8084 : 8081,
+  native: () => 8081,
   kvm:    () => 8082,
   docker: () => 8083,
 };
@@ -185,8 +195,17 @@ function resetCol(id) {
 async function fetchRuntime(id, port, fn) {
   setStatus(id, 'running', 'running…');
   const t0 = performance.now();
+  const isWeather = fn === 'c/weather_fmt' || fn === 'python/weather_fmt';
+  const isPrime = PRIME_FUNCTIONS.includes(fn);
+  const inputVal = document.getElementById('fnInput').value.trim();
+  let reqBody = undefined;
+  if (isWeather) reqBody = String(port);
+  else if (isPrime && inputVal) reqBody = inputVal;
   try {
-    const resp = await fetch(`http://localhost:${port}/${fn}`);
+    const resp = await fetch(`http://localhost:${port}/${fn}`, {
+      method: reqBody !== undefined ? 'POST' : 'GET',
+      body: reqBody,
+    });
     const e2e = performance.now() - t0;
     const cold = parseFloat(resp.headers.get('X-Cold-Start') || 0);
     const exec = parseFloat(resp.headers.get('X-Exec-Time') || 0);
@@ -208,15 +227,14 @@ async function runAll() {
   btn.disabled = true;
 
   // Update native port label
-  const nativePort = PORT_MAP.native(fn);
   document.getElementById('native-port').textContent =
-    ':' + nativePort + ' (' + (fn.startsWith('python/') ? 'python' : 'process') + ')';
+    ':8081 (native)';
 
   ['native','kvm','docker'].forEach(resetCol);
 
   const [nativeE2e, kvmE2e, dockerE2e] = await Promise.all([
-    fetchRuntime('native', nativePort,       fn),
-    fetchRuntime('kvm',    PORT_MAP.kvm(),   fn),
+    fetchRuntime('native', PORT_MAP.native(), fn),
+    fetchRuntime('kvm',    PORT_MAP.kvm(),    fn),
     fetchRuntime('docker', PORT_MAP.docker(), fn),
   ]);
 

@@ -92,6 +92,24 @@ void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {
     write(1, str, len);
 }
 
+// Required: HAL stdin function for input() builtin
+int mp_hal_stdin_rx_chr(void) {
+    unsigned char c;
+    long n = read(0, &c, 1);
+    return (n == 1) ? c : -1;
+}
+
+// readline implementation for input() — reads until newline or EOF
+#include "py/misc.h"
+int mp_iai_readline(vstr_t *line, const char *prompt) {
+    (void)prompt;
+    vstr_reset(line);
+    int c;
+    while ((c = mp_hal_stdin_rx_chr()) >= 0 && c != '\n')
+        vstr_add_byte(line, (byte)c);
+    return 0;
+}
+
 // Required: Frozen module support (empty for now)
 const char mp_frozen_names[] = {0};
 const uint32_t mp_frozen_mpy_content[] = {0};

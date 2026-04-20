@@ -61,6 +61,22 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cmd = exec.Command("../host/host_loader", binPath)
+	case "native":
+		if strings.HasPrefix(safeName, "python/") {
+			scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
+			if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+				http.Error(w, fmt.Sprintf("Function script not found: %s", scriptPath), http.StatusNotFound)
+				return
+			}
+			cmd = exec.Command("python3", "../samples/python/runner.py", scriptPath)
+		} else {
+			binPath := fmt.Sprintf("../samples/%s_proc", safeName)
+			if _, err := os.Stat(binPath); os.IsNotExist(err) {
+				http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+				return
+			}
+			cmd = exec.Command(binPath)
+		}
 	case "process":
 		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
 		if _, err := os.Stat(binPath); os.IsNotExist(err) {
@@ -78,7 +94,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	case "docker":
 		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
-		cmd = exec.Command("docker", "run", "--rm", "--network=host", containerName)
+		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
@@ -88,6 +104,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
+	cmd.Stdin = r.Body
 
 	t1 := time.Now()
 	err := cmd.Run()

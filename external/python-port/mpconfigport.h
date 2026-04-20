@@ -34,6 +34,15 @@ typedef long ssize_t;
 // Enable % string formatting
 #define MICROPY_PY_BUILTINS_STR_OP_MODULO (1)
 
+// Enable string/list slicing
+#define MICROPY_PY_BUILTINS_SLICE         (1)
+
+// Enable input() builtin backed by mp_hal_stdin_rx_chr
+#define MICROPY_PY_BUILTINS_INPUT         (1)
+struct _vstr_t;
+int mp_iai_readline(struct _vstr_t *line, const char *prompt);
+#define mp_hal_readline mp_iai_readline
+
 // Disable threading
 #define MICROPY_PY_THREAD                 (0)
 

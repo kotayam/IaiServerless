@@ -11,23 +11,20 @@ make -C samples proc docker-all
 
 echo ""
 echo "[*] Starting gateways:"
-echo "    :8081  process  (c/*)"
+echo "    :8081  native   (c/* → process, python/* → python3)"
 echo "    :8082  kvm      (c/* and python/*)"
 echo "    :8083  docker   (c/* and python/*)"
-echo "    :8084  python   (python/*)"
 echo ""
 
 cd gateway
-./gateway_bin -runtime=process -port=8081 &
+./gateway_bin -runtime=native -port=8081 &
 PID1=$!
-./gateway_bin -runtime=kvm     -port=8082 &
+./gateway_bin -runtime=kvm    -port=8082 &
 PID2=$!
-./gateway_bin -runtime=docker  -port=8083 &
+./gateway_bin -runtime=docker -port=8083 &
 PID3=$!
-./gateway_bin -runtime=python  -port=8084 &
-PID4=$!
 
-trap "echo ''; echo '[*] Shutting down...'; kill $PID1 $PID2 $PID3 $PID4 2>/dev/null" EXIT INT TERM
+trap "echo ''; echo '[*] Shutting down...'; kill $PID1 $PID2 $PID3 2>/dev/null" EXIT INT TERM
 
 echo "[*] Demo ready: http://localhost:8081"
 echo "    Press Ctrl+C to stop."

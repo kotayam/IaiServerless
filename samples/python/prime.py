@@ -1,25 +1,28 @@
-def isqrt(n):
-    if n < 0:
-        return 0
-    x = n
-    y = (x + 1) // 2
-    while y < x:
-        x = y
-        y = (x + n // x) // 2
-    return x
-
 def is_prime(n):
     if n < 2:
         return False
-    for i in range(2, isqrt(n) + 1):
+    i = 2
+    while i * i <= n:
         if n % i == 0:
             return False
+        i += 1
     return True
 
 def handler():
-    # Find primes up to 100
-    primes = [n for n in range(2, 101) if is_prime(n)]
-    print("Primes up to 100:", primes)
-    print("Count:", len(primes))
-    return primes
+    n_str = input()
+    n = 0
+    for c in n_str:
+        if c >= '0' and c <= '9':
+            n = n * 10 + (ord(c) - ord('0'))
+    if n <= 0:
+        n = 10000
+    count = 0
+    num = 2
+    last_prime = 2
+    while count < n:
+        if is_prime(num):
+            count += 1
+            last_prime = num
+        num += 1
+    print("Compute Task Complete. %dth prime is: %d" % (n, last_prime))
 
