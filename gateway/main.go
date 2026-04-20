@@ -94,7 +94,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	case "docker":
 		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
-		cmd = exec.Command("docker", "run", "--rm", "--network=host", containerName)
+		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
