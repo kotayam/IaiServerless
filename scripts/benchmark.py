@@ -11,8 +11,8 @@ import argparse
 GATEWAY_PORT = 8080
 C_RUNTIMES = ["process", "kvm", "docker"]
 PYTHON_RUNTIMES = ["python", "kvm", "docker"]
-C_SAMPLES = ["c/hello", "c/prime", "c/weather", "c/json_builder", "c/alloc_stress", "c/multi_req"]
-PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather", "python/alloc_stress", "python/multi_req"]
+C_SAMPLES = ["c/hello", "c/prime", "c/weather", "c/weather_fmt", "c/json_builder", "c/alloc_stress", "c/multi_req"]
+PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather", "python/weather_fmt", "python/alloc_stress", "python/multi_req"]
 
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
@@ -45,20 +45,34 @@ def start_gateway(runtime, port):
     process.terminate()
     sys.exit(1)
 
-def run_benchmark(sample, num_requests):
+def run_benchmark(sample, num_requests, gateway_port):
     results = []
     print(f"    - Benchmarking /{sample} ({num_requests} requests)...", end="", flush=True)
     
+    # Determine if POST is needed
+    is_prime = sample.endswith("/prime")
+    is_weather_fmt = sample.endswith("/weather_fmt")
+    
     # Warm up request
     try:
-        requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
+        if is_prime:
+            requests.post(f"{GATEWAY_URL}/{sample}", data="10000", timeout=10)
+        elif is_weather_fmt:
+            requests.post(f"{GATEWAY_URL}/{sample}", data=str(gateway_port), timeout=10)
+        else:
+            requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
     except:
         pass
 
     for _ in range(num_requests):
         try:
             t0 = time.time()
-            resp = requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
+            if is_prime:
+                resp = requests.post(f"{GATEWAY_URL}/{sample}", data="10000", timeout=10)
+            elif is_weather_fmt:
+                resp = requests.post(f"{GATEWAY_URL}/{sample}", data=str(gateway_port), timeout=10)
+            else:
+                resp = requests.get(f"{GATEWAY_URL}/{sample}", timeout=10)
             client_e2e = (time.time() - t0) * 1000 # ms
             
             if resp.status_code == 200:
@@ -101,7 +115,7 @@ def main():
         gw_proc = start_gateway(rt, args.port)
         final_report[rt] = {}
         for sample in C_SAMPLES:
-            results = run_benchmark(sample, num_req)
+            results = run_benchmark(sample, num_req, args.port)
             final_report[rt][sample] = results
         gw_proc.terminate()
         try:
@@ -114,7 +128,7 @@ def main():
         gw_proc = start_gateway(rt, args.port)
         final_report.setdefault(rt, {})
         for sample in PYTHON_SAMPLES:
-            results = run_benchmark(sample, num_req)
+            results = run_benchmark(sample, num_req, args.port)
             final_report[rt][sample] = results
         gw_proc.terminate()
         try:

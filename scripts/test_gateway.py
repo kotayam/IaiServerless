@@ -8,11 +8,22 @@ import argparse
 
 GATEWAY_PORT = 8080
 
-def test_endpoint(name):
+def test_endpoint(name, gateway_port):
     print(f"--- Testing endpoint: /{name} ---")
     try:
         start_time = time.time()
-        response = requests.get(f"{GATEWAY_URL}/{name}")
+        
+        # Determine if POST is needed
+        is_prime = name.endswith("/prime")
+        is_weather_fmt = name.endswith("/weather_fmt")
+        
+        if is_prime:
+            response = requests.post(f"{GATEWAY_URL}/{name}", data="10000")
+        elif is_weather_fmt:
+            response = requests.post(f"{GATEWAY_URL}/{name}", data=str(gateway_port))
+        else:
+            response = requests.get(f"{GATEWAY_URL}/{name}")
+        
         duration = time.time() - start_time
         
         print(f"Status Code: {response.status_code}")
@@ -26,7 +37,10 @@ def test_endpoint(name):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("endpoints", nargs="*", default=["c/hello", "c/prime", "c/net_query", "c/weather", "c/json_builder"])
+    parser.add_argument("endpoints", nargs="*", default=[
+        "c/hello", "c/prime", "c/weather", "c/weather_fmt", "c/json_builder",
+        "python/hello", "python/prime", "python/weather", "python/weather_fmt"
+    ])
     parser.add_argument("--port", type=int, default=GATEWAY_PORT)
     args = parser.parse_args()
 
@@ -45,7 +59,7 @@ def main():
 
     success_count = 0
     for ep in endpoints:
-        if test_endpoint(ep):
+        if test_endpoint(ep, args.port):
             success_count += 1
 
     print(f"\nSummary: {success_count}/{len(endpoints)} tests passed.")
