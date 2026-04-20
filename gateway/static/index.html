@@ -68,6 +68,7 @@
       <option value="python/hello">python/hello</option>
       <option value="python/prime">python/prime</option>
       <option value="python/weather">python/weather 🌐</option>
+      <option value="python/weather_fmt">python/weather_fmt 🌐🔗</option>
       <option value="python/alloc_stress">python/alloc_stress</option>
     </optgroup>
   </select>
@@ -180,7 +181,7 @@ async function fetchRuntime(id, port, fn) {
   setStatus(id, 'running', 'running…');
   const t0 = performance.now();
   // c/weather_fmt needs the gateway port so it can call back to weather_parser
-  const isWeather = fn === 'c/weather_fmt';
+  const isWeather = fn === 'c/weather_fmt' || fn === 'python/weather_fmt';
   try {
     const resp = await fetch(`http://localhost:${port}/${fn}`, {
       method: isWeather ? 'POST' : 'GET',
