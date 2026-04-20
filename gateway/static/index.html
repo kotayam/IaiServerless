@@ -10,10 +10,11 @@
   p.sub { color: #666; font-size: 0.8rem; margin-bottom: 24px; }
 
   .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
-  select, button {
+  select, button, input[type=text] {
     background: #1e1e1e; color: #e0e0e0; border: 1px solid #333;
     padding: 8px 14px; font-family: monospace; font-size: 0.9rem; cursor: pointer;
   }
+  input[type=text] { cursor: text; width: 100px; }
   button { background: #2a6496; border-color: #2a6496; color: #fff; }
   button:hover { background: #3a7ab6; }
   button:disabled { background: #333; border-color: #333; color: #666; cursor: default; }
@@ -55,7 +56,7 @@
 <p class="sub">Unikernel-based serverless runtime — same function, four runtimes, live latency comparison</p>
 
 <div class="controls">
-  <select id="fnSelect">
+  <select id="fnSelect" onchange="onFnChange()">
     <optgroup label="C Functions">
       <option value="c/hello">c/hello</option>
       <option value="c/prime">c/prime</option>
@@ -72,6 +73,7 @@
       <option value="python/alloc_stress">python/alloc_stress</option>
     </optgroup>
   </select>
+  <input type="text" id="fnInput" placeholder="N" style="display:none" />
   <button id="runBtn" onclick="runAll()">▶ Run</button>
 </div>
 
@@ -131,6 +133,19 @@ const RUNTIMES = [
 // 8081 = native (c/* → process, python/* → python3)
 // 8082 = kvm
 // 8083 = docker
+const PRIME_FUNCTIONS = ['c/prime', 'python/prime'];
+
+function onFnChange() {
+  const fn = document.getElementById('fnSelect').value;
+  const inp = document.getElementById('fnInput');
+  if (PRIME_FUNCTIONS.includes(fn)) {
+    inp.style.display = '';
+    inp.placeholder = 'N (default 10000)';
+  } else {
+    inp.style.display = 'none';
+  }
+}
+
 const PORT_MAP = {
   native: () => 8081,
   kvm:    () => 8082,
@@ -180,12 +195,16 @@ function resetCol(id) {
 async function fetchRuntime(id, port, fn) {
   setStatus(id, 'running', 'running…');
   const t0 = performance.now();
-  // c/weather_fmt needs the gateway port so it can call back to weather_parser
   const isWeather = fn === 'c/weather_fmt' || fn === 'python/weather_fmt';
+  const isPrime = PRIME_FUNCTIONS.includes(fn);
+  const inputVal = document.getElementById('fnInput').value.trim();
+  let reqBody = undefined;
+  if (isWeather) reqBody = String(port);
+  else if (isPrime && inputVal) reqBody = inputVal;
   try {
     const resp = await fetch(`http://localhost:${port}/${fn}`, {
-      method: isWeather ? 'POST' : 'GET',
-      body: isWeather ? String(port) : undefined,
+      method: reqBody !== undefined ? 'POST' : 'GET',
+      body: reqBody,
     });
     const e2e = performance.now() - t0;
     const cold = parseFloat(resp.headers.get('X-Cold-Start') || 0);
