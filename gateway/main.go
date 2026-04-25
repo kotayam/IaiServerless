@@ -15,7 +15,7 @@ import (
 )
 
 var runtimeMode string
-var junctionRunPath string
+var junctionBuildPath string
 
 func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
@@ -102,7 +102,9 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
 			return
 		}
-		cmd = exec.Command(junctionRunPath, binPath)
+		junctionRun := junctionBuildPath + "/junction/junction_run"
+		caladanConfig := junctionBuildPath + "/junction/caladan_test.config"
+		cmd = exec.Command(junctionRun, caladanConfig, "--", binPath)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
@@ -162,12 +164,12 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, docker, or junction")
-	flag.StringVar(&junctionRunPath, "junction-run", "", "Path to junction_run binary (required when runtime=junction)")
+	flag.StringVar(&junctionBuildPath, "junction-build", "", "Path to junction build directory (required when runtime=junction)")
 	portFlag := flag.String("port", "8080", "The port for the gateway to listen on")
 	flag.Parse()
 
-	if runtimeMode == "junction" && junctionRunPath == "" {
-		log.Fatal("-junction-run flag is required when runtime=junction")
+	if runtimeMode == "junction" && junctionBuildPath == "" {
+		log.Fatal("-junction-build flag is required when runtime=junction")
 	}
 	port := fmt.Sprintf(":%s", *portFlag)
 
