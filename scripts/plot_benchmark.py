@@ -54,8 +54,12 @@ def plot_metric(ax, group, metric, title, ylabel, log_scale=False):
             v = group[fn].get(rt, {}).get(metric)
             vals.append(v if v is not None else 0)
             mask.append(v is not None)
+        hatch = None if rt == "kvm" else "///"
+        edge = COLORS.get(rt, "#999")
+        face = COLORS.get(rt, "#999") if rt == "kvm" else "white"
         bars = ax.bar(x + i * width - 0.4 + width / 2, vals, width,
-                      label=rt, color=COLORS.get(rt, "#999"), zorder=3)
+                      label=rt, facecolor=face, edgecolor=edge,
+                      hatch=hatch, linewidth=1.2, zorder=3)
         for j, b in enumerate(bars):
             if not mask[j]:
                 b.set_alpha(0.15)
