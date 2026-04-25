@@ -143,8 +143,16 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 				coldStart = e2e - execTime
 			}
 		}
-	case "process", "docker", "python", "junction":
+	case "process", "docker", "python":
 		for _, line := range strings.Split(stderrBuf.String(), "\n") {
+			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
+				execTime, _ = strconv.ParseFloat(val, 64)
+				coldStart = e2e - execTime
+			}
+		}
+	case "junction":
+		// Junction merges child stderr into stdout
+		for _, line := range strings.Split(stdoutBuf.String(), "\n") {
 			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
 				execTime, _ = strconv.ParseFloat(val, 64)
 				coldStart = e2e - execTime
