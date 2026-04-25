@@ -4,6 +4,7 @@ import time
 import subprocess
 import sys
 import os
+import csv
 import statistics
 import signal
 import argparse
@@ -242,6 +243,26 @@ def main():
                 print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>16} | {size}")
             else:
                 print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>16} | {size}")
+
+    # Export CSV
+    csv_path = "scripts/benchmark_result.csv"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["function", "runtime", "cold_start_ms", "exec_time_ms", "e2e_ms", "binary_size_bytes"])
+        all_samples = [(s, c_runtimes_display) for s in C_SAMPLES] + [(s, py_runtimes_display) for s in PYTHON_SAMPLES]
+        for sample, runtimes in all_samples:
+            for rt in runtimes:
+                res = final_report.get(rt, {}).get(sample, [])
+                size = get_binary_size(rt, sample)
+                if res:
+                    w.writerow([sample, rt,
+                        f"{statistics.mean([r.cold_start for r in res]):.3f}",
+                        f"{statistics.mean([r.exec_time for r in res]):.3f}",
+                        f"{statistics.mean([r.e2e_latency for r in res]):.3f}",
+                        size or ""])
+                else:
+                    w.writerow([sample, rt, "", "", "", size or ""])
+    print(f"\n[*] Results saved to {csv_path}")
 
 if __name__ == "__main__":
     main()
