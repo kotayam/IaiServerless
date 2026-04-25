@@ -2,14 +2,25 @@
   "active_tasks": [],
   "backlog": [
     {
-      "id": "python-gateway-integration",
-      "title": "Add Python runtime support to gateway",
+      "id": "junction-stdin",
+      "title": "Investigate Junction stdin forwarding",
       "priority": "medium",
-      "description": "Extend gateway to support Python functions alongside C/C++",
-      "dependencies": ["python-benchmark"],
+      "description": "Junction does not forward stdin to child processes. c/prime silently falls back to default, python/prime crashes with EOFError.",
+      "dependencies": [],
       "subtasks": [
-        "Update gateway to recognize python/ sample directory",
-        "Add Python functions to benchmark suite"
+        "Investigate if Junction supports stdin piping",
+        "If not, consider alternative input methods (env vars, args, temp files)"
+      ]
+    },
+    {
+      "id": "junction-networking",
+      "title": "Investigate Junction networking support",
+      "priority": "medium",
+      "description": "Junction fails on setsockopt — DNS and HTTP requests fail. weather, weather_fmt, multi_req all fail.",
+      "dependencies": [],
+      "subtasks": [
+        "Check if Junction supports basic TCP without setsockopt",
+        "Test with direct IP connections (bypass DNS)"
       ]
     },
     {
@@ -29,7 +40,7 @@
       "title": "Optimize Python cold start performance",
       "priority": "low",
       "description": "Profile and optimize MicroPython initialization time",
-      "dependencies": ["python-benchmark"],
+      "dependencies": [],
       "subtasks": [
         "Measure baseline cold start time",
         "Profile MicroPython initialization",
@@ -39,12 +50,13 @@
     },
     {
       "id": "documentation",
-      "title": "Document Python runtime usage",
+      "title": "Document Python and Junction runtime usage",
       "priority": "low",
-      "description": "Add documentation for writing and deploying Python functions",
-      "dependencies": ["python-benchmark"],
+      "description": "Add documentation for writing and deploying functions across all runtimes",
+      "dependencies": [],
       "subtasks": [
-        "Update README.md with Python examples",
+        "Update README.md with Junction examples",
+        "Document Junction setup and limitations",
         "Document mpconfigport.h configuration",
         "Add Python function development guide",
         "Document limitations and best practices"
@@ -52,6 +64,48 @@
     }
   ],
   "completed_tasks": [
+    {
+      "id": "junction-runtime",
+      "title": "Add Junction libOS runtime to gateway and benchmark",
+      "completed_date": "2026-04-25",
+      "description": "Added Junction as a fifth runtime option. Gateway supports -runtime=junction with -junction-build flag. Benchmark includes Junction with --junction flag.",
+      "deliverables": [
+        "gateway/main.go: junction runtime case, -junction-build flag, nativeBinPath() helper shared with native",
+        "gateway/main.go: junction parses X-Exec-Time from stdout (Junction merges child stderr into stdout)",
+        "gateway/main.go: junction resolves python3 to absolute path via exec.LookPath",
+        "scripts/benchmark.py: --junction flag, JUNCTION_C_SAMPLES/JUNCTION_PYTHON_SAMPLES lists, binary size reporting",
+        "scripts/benchmark.py: junction-build path converted to absolute before passing to gateway subprocess",
+        "scripts/test_gateway.py: displays X-Cold-Start, X-Exec-Time, X-E2E-Latency headers"
+      ],
+      "findings": [
+        "Junction C cold start ~31ms (1.5x slower than KVM ~20ms)",
+        "Junction Python cold start ~63ms (3x slower than KVM — Junction boot + CPython startup)",
+        "Junction does not forward stdin to child processes",
+        "Junction does not support setsockopt — networking functions fail",
+        "Junction merges child stderr into stdout"
+      ]
+    },
+    {
+      "id": "docker-alpine-optimization",
+      "title": "Optimize Docker images with Alpine",
+      "completed_date": "2026-04-25",
+      "description": "Switched Docker images from Debian bookworm-slim to Alpine for fairer benchmarking",
+      "deliverables": [
+        "samples/c/Dockerfile: multi-stage Alpine build (build in alpine:3.20, run in alpine:3.20) — 3.5 MB",
+        "samples/python/Dockerfile: python:3.11-alpine — 19.4 MB"
+      ]
+    },
+    {
+      "id": "cloudlab-build-fixes",
+      "title": "Fix build issues on CloudLab Ubuntu machines",
+      "completed_date": "2026-04-25",
+      "description": "CloudLab GCC enables _FORTIFY_SOURCE by default, generating __*_chk function calls that don't exist in the freestanding shim",
+      "deliverables": [
+        "shim/Makefile: added -U_FORTIFY_SOURCE to CFLAGS",
+        "samples/c/Makefile: added -U_FORTIFY_SOURCE to CFLAGS",
+        "host/loader.c: added return value checks for read() calls (fixes -Werror=unused-result)"
+      ]
+    },
     {
       "id": "inter-function-calls",
       "title": "Add stdin/read support and inter-function calls",
@@ -111,7 +165,7 @@
       "completed_date": "2026-04-19",
       "description": "Added Python functions to the benchmark suite across all three runtimes (kvm, python process, docker)",
       "deliverables": [
-        "samples/python/Dockerfile: python:3.11-slim image with ARG SOURCE",
+        "samples/python/Dockerfile: python:3.11-alpine image with ARG SOURCE",
         "samples/python/Makefile: proc and docker-all targets",
         "gateway: python process runtime support",
         "scripts/benchmark.py: python/hello, python/prime, python/weather added",
@@ -166,11 +220,13 @@
     }
   ],
   "notes": [
-    "Currently on add-python-support branch",
+    "Currently on add-read-support branch",
     "Python code embedded into ELF via objcopy, executed from _binary_code_py_start",
     "socket module backed by shim hypercalls - standard import socket works",
     "Float disabled - use integer arithmetic (isqrt pattern for prime)",
     "str.encode()/decode() unavailable at ROM_LEVEL_MINIMUM - use bytes() and str() constructors",
-    "% string formatting enabled via MICROPY_PY_BUILTINS_STR_OP_MODULO"
+    "% string formatting enabled via MICROPY_PY_BUILTINS_STR_OP_MODULO",
+    "CloudLab machines need: sudo usermod -aG docker,kvm $USER",
+    "MicroPython submodule: git submodule update --init external/micropython"
   ]
 }
