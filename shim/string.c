@@ -82,8 +82,3 @@ int memcmp(const void *s1, const void *s2, size_t n) {
   while (n--) { if (*a != *b) return *a - *b; a++; b++; }
   return 0;
 }
-
-void *__memset_chk(void *s, int c, size_t n, size_t destlen) {
-  (void)destlen;
-  return memset(s, c, n);
-}

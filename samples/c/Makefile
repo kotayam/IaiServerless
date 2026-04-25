@@ -5,7 +5,7 @@ LD = ld
 OBJCOPY = objcopy
 
 # Compiler flags for all user functions
-CFLAGS = -ffreestanding -m64 -O2 -Wall -Wextra
+CFLAGS = -ffreestanding -m64 -O2 -Wall -Wextra -U_FORTIFY_SOURCE
 
 # Linker flags
 LDFLAGS_RAW = -Ttext 0x0

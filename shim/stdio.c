@@ -185,13 +185,3 @@ int putc(int c, FILE *stream) {
 int fputc(int c, FILE *stream) {
   return putc(c, stream);
 }
-
-int __snprintf_chk(char *str, size_t size, int flag, size_t slen, const char *fmt, ...) {
-  (void)flag;
-  (void)slen;
-  va_list ap;
-  va_start(ap, fmt);
-  int ret = vsnprintf(str, size, fmt, ap);
-  va_end(ap);
-  return ret;
-}
