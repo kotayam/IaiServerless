@@ -39,6 +39,16 @@ func sourceHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
+// nativeBinPath returns the executable path and any extra arguments for a function.
+func nativeBinPath(safeName string) (string, []string) {
+	if strings.HasPrefix(safeName, "python/") {
+		scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
+		return "python3", []string{"../samples/python/runner.py", scriptPath}
+	}
+	binPath := fmt.Sprintf("../samples/%s_proc", safeName)
+	return binPath, nil
+}
+
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
 	t0 := time.Now()
 
@@ -63,21 +73,12 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cmd = exec.Command("../host/host_loader", binPath)
 	case "native":
-		if strings.HasPrefix(safeName, "python/") {
-			scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
-			if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-				http.Error(w, fmt.Sprintf("Function script not found: %s", scriptPath), http.StatusNotFound)
-				return
-			}
-			cmd = exec.Command("python3", "../samples/python/runner.py", scriptPath)
-		} else {
-			binPath := fmt.Sprintf("../samples/%s_proc", safeName)
-			if _, err := os.Stat(binPath); os.IsNotExist(err) {
-				http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
-				return
-			}
-			cmd = exec.Command(binPath)
+		bin, args := nativeBinPath(safeName)
+		if _, err := os.Stat(bin); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function not found: %s", bin), http.StatusNotFound)
+			return
 		}
+		cmd = exec.Command(bin, args...)
 	case "process":
 		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
 		if _, err := os.Stat(binPath); os.IsNotExist(err) {
@@ -97,14 +98,15 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
 	case "junction":
-		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
-		if _, err := os.Stat(binPath); os.IsNotExist(err) {
-			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+		bin, args := nativeBinPath(safeName)
+		if _, err := os.Stat(bin); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function not found: %s", bin), http.StatusNotFound)
 			return
 		}
 		junctionRun := junctionBuildPath + "/junction/junction_run"
 		caladanConfig := junctionBuildPath + "/junction/caladan_test.config"
-		cmd = exec.Command(junctionRun, caladanConfig, "--", binPath)
+		jArgs := append([]string{caladanConfig, "--", bin}, args...)
+		cmd = exec.Command(junctionRun, jArgs...)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
