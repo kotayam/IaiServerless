@@ -25,23 +25,27 @@ class BenchmarkResult:
         self.exec_time = exec_time
         self.e2e_latency = e2e_latency
 
+def _python3_size():
+    """Return the size of the python3 interpreter binary, cached."""
+    if not hasattr(_python3_size, "_val"):
+        result = subprocess.run(["which", "python3"], capture_output=True, text=True)
+        if result.returncode == 0:
+            _python3_size._val = os.path.getsize(os.path.realpath(result.stdout.strip()))
+        else:
+            _python3_size._val = 0
+    return _python3_size._val
+
 def get_binary_size(runtime, sample):
     """Return binary/image size in bytes for a given runtime and sample, or None."""
     try:
-        if runtime in ("process", "junction"):
+        if runtime in ("process", "junction", "python"):
             if sample.startswith("python/"):
-                path = f"samples/{sample}.py"
+                runner = os.path.getsize("samples/python/runner.py")
+                return _python3_size() + runner + os.path.getsize(f"samples/{sample}.py")
             else:
-                path = f"samples/{sample}_proc"
-            return os.path.getsize(path)
+                return os.path.getsize(f"samples/{sample}_proc")
         elif runtime == "kvm":
             return os.path.getsize(f"samples/{sample}.elf")
-        elif runtime == "python":
-            result = subprocess.run(["which", "python3"], capture_output=True, text=True)
-            if result.returncode == 0:
-                interp = os.path.realpath(result.stdout.strip())
-                return os.path.getsize(interp) + os.path.getsize(f"samples/{sample}.py")
-            return os.path.getsize(f"samples/{sample}.py")
         elif runtime == "docker":
             name = f"iai_{sample.replace('/', '_')}"
             result = subprocess.run(
