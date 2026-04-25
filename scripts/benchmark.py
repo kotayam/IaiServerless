@@ -14,6 +14,10 @@ PYTHON_RUNTIMES = ["python", "kvm", "docker"]
 C_SAMPLES = ["c/hello", "c/prime", "c/weather", "c/weather_fmt", "c/json_builder", "c/alloc_stress", "c/multi_req"]
 PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather", "python/weather_fmt", "python/alloc_stress", "python/multi_req"]
 
+# Samples that work under Junction (no networking)
+JUNCTION_C_SAMPLES = ["c/hello", "c/prime", "c/json_builder", "c/alloc_stress"]
+JUNCTION_PYTHON_SAMPLES = ["python/hello", "python/prime", "python/alloc_stress"]
+
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
         self.name = name
@@ -21,12 +25,14 @@ class BenchmarkResult:
         self.exec_time = exec_time
         self.e2e_latency = e2e_latency
 
-def start_gateway(runtime, port):
+def start_gateway(runtime, port, junction_build=None):
     print(f"[*] Starting Gateway with runtime: {runtime}")
     # Run 'go build' first to ensure we aren't measuring compilation time
     subprocess.run(["go", "build", "-o", "gateway_bin", "main.go"], cwd="gateway", check=True)
     
     cmd = ["./gateway_bin", f"-runtime={runtime}", f"-port={port}"]
+    if junction_build:
+        cmd.append(f"-junction-build={junction_build}")
     process = subprocess.Popen(cmd, cwd="gateway", stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     # Wait for gateway to be ready
@@ -96,6 +102,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("num_requests", nargs="?", type=int, default=30)
     parser.add_argument("--port", type=int, default=GATEWAY_PORT)
+    parser.add_argument("--junction", metavar="BUILD_PATH", help="Run Junction benchmark using the given build path")
     args = parser.parse_args()
 
     global GATEWAY_URL
@@ -137,38 +144,57 @@ def main():
             gw_proc.kill()
         time.sleep(1)
 
+    if args.junction:
+        gw_proc = start_gateway("junction", args.port, junction_build=args.junction)
+        final_report["junction"] = {}
+        for sample in JUNCTION_C_SAMPLES + JUNCTION_PYTHON_SAMPLES:
+            results = run_benchmark(sample, num_req, args.port)
+            final_report["junction"][sample] = results
+        gw_proc.terminate()
+        try:
+            gw_proc.wait(timeout=5)
+        except:
+            gw_proc.kill()
+        time.sleep(1)
+
     # Generate Comparative Table
     print("\n" + "="*70)
     print("                 IAI SERVERLESS BENCHMARK REPORT")
     print("="*70)
 
     print("\n--- C FUNCTIONS ---")
+    c_runtimes_display = C_RUNTIMES + (["junction"] if args.junction else [])
     for sample in C_SAMPLES:
         print(f"\nFUNCTION: /{sample}")
         print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
         print(f"----------|------------------|-----------------|------------------")
-        for rt in C_RUNTIMES:
-            res = final_report[rt].get(sample, [])
+        for rt in c_runtimes_display:
+            res = final_report.get(rt, {}).get(sample, [])
             if res:
                 avg_cold = statistics.mean([r.cold_start for r in res])
                 avg_exec = statistics.mean([r.exec_time for r in res])
                 avg_e2e  = statistics.mean([r.e2e_latency for r in res])
                 print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
+            elif rt == "junction" and sample not in JUNCTION_C_SAMPLES:
+                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>17}")
             else:
                 print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
 
     print("\n--- PYTHON FUNCTIONS ---")
+    py_runtimes_display = PYTHON_RUNTIMES + (["junction"] if args.junction else [])
     for sample in PYTHON_SAMPLES:
         print(f"\nFUNCTION: /{sample}")
         print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
         print(f"----------|------------------|-----------------|------------------")
-        for rt in PYTHON_RUNTIMES:
-            res = final_report[rt].get(sample, [])
+        for rt in py_runtimes_display:
+            res = final_report.get(rt, {}).get(sample, [])
             if res:
                 avg_cold = statistics.mean([r.cold_start for r in res])
                 avg_exec = statistics.mean([r.exec_time for r in res])
                 avg_e2e  = statistics.mean([r.e2e_latency for r in res])
                 print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
+            elif rt == "junction" and sample not in JUNCTION_PYTHON_SAMPLES:
+                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>17}")
             else:
                 print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
 
