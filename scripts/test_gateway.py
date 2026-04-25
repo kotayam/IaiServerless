@@ -26,7 +26,12 @@ def test_endpoint(name, gateway_port):
         
         duration = time.time() - start_time
         
+        cold = response.headers.get("X-Cold-Start", "N/A")
+        exec_t = response.headers.get("X-Exec-Time", "N/A")
+        e2e = response.headers.get("X-E2E-Latency", "N/A")
+
         print(f"Status Code: {response.status_code}")
+        print(f"Cold Start: {cold} ms | Exec Time: {exec_t} ms | E2E Latency: {e2e} ms")
         print(f"Response Body:\n{response.text}")
         print(f"Request Duration: {duration:.3f}s")
         print("-" * 30)
