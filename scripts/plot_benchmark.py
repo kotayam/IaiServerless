@@ -71,7 +71,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
 
     ax.set_yscale("log")
     ax.set_title(title, fontsize=14, fontweight="bold")
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(f"{ylabel} (log scale)")
     ax.set_xticks(x)
     ax.set_xticklabels(functions, rotation=35, ha="right", fontsize=9)
     ax.legend(fontsize=9)
