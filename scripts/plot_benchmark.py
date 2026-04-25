@@ -100,7 +100,7 @@ def format_val(v, ylabel):
         return f"{int(v)}"
     if v >= 1:
         return f"{v:.1f}"
-    return f"{v:.1f}"
+    return f"{v*1000:.0f}µs"
 
 def write_tables(data, out_path):
     functions = list(data.keys())
