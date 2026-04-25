@@ -63,7 +63,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             plt.rcParams['hatch.color'] = color
             bars = ax.bar(pos, vals, width,
                           label=rt, facecolor="none", edgecolor=color,
-                          hatch="////", linewidth=1.2, zorder=3)
+                          hatch="////", linewidth=0.6, zorder=3)
 
         for j, b in enumerate(bars):
             if not mask[j]:
