@@ -40,11 +40,11 @@ def get_runtimes(data):
 def plot_metric(data, metric, title, ylabel, out_path):
     functions = list(data.keys())
     runtimes = get_runtimes(data)
-    x = np.arange(len(functions))
+    x = np.arange(len(functions)) * 1.5  # more space between function groups
     n = len(runtimes)
-    width = 0.6 / n
+    width = 0.8 / n
 
-    fig, ax = plt.subplots(figsize=(max(16, len(functions) * 1.5), 7))
+    fig, ax = plt.subplots(figsize=(max(18, len(functions) * 2), 7))
 
     for i, rt in enumerate(runtimes):
         vals = []
@@ -55,7 +55,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             mask.append(v is not None)
 
         color = COLORS.get(rt, "#999")
-        pos = x + i * width - 0.3 + width / 2
+        pos = x + i * width - (n * width / 2) + width / 2
         if rt == "kvm":
             bars = ax.bar(pos, vals, width,
                           label=rt, color=color, edgecolor=color, linewidth=1.2, zorder=3)
@@ -71,7 +71,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             elif vals[j] > 0:
                 label = format_val(vals[j], ylabel)
                 ax.text(b.get_x() + b.get_width() / 2, vals[j],
-                        label, ha="center", va="bottom", fontsize=5.5,
+                        label, ha="center", va="bottom", fontsize=7,
                         color=color, fontweight="bold")
 
     ax.set_yscale("log")
@@ -87,14 +87,18 @@ def plot_metric(data, metric, title, ylabel, out_path):
     plt.close()
     print(f"Saved {out_path}")
 
-def format_val(v, metric):
+def format_val(v, ylabel):
     if v is None:
         return "-"
-    if metric == "size_kb":
+    if ylabel == "KB":
         if v >= 1024:
-            return f"{v/1024:.1f} MB"
-        return f"{v:.1f} KB"
-    return f"{v:.3f}"
+            return f"{v/1024:.0f}M"
+        return f"{v:.0f}K"
+    if v >= 100:
+        return f"{int(v)}"
+    if v >= 1:
+        return f"{v:.1f}"
+    return f"{v:.1f}"
 
 def write_tables(data, out_path):
     functions = list(data.keys())
