@@ -143,7 +143,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 				coldStart = e2e - execTime
 			}
 		}
-	case "process", "docker", "python":
+	case "native", "process", "docker", "python":
 		for _, line := range strings.Split(stderrBuf.String(), "\n") {
 			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
 				execTime, _ = strconv.ParseFloat(val, 64)
