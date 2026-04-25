@@ -97,7 +97,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
 	case "junction":
-		binPath := fmt.Sprintf("../samples/%s.elf", safeName)
+		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
 		if _, err := os.Stat(binPath); os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
 			return
