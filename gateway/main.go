@@ -15,6 +15,7 @@ import (
 )
 
 var runtimeMode string
+var junctionRunPath string
 
 func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
@@ -95,6 +96,13 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
+	case "junction":
+		binPath := fmt.Sprintf("../samples/%s.elf", safeName)
+		if _, err := os.Stat(binPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
+			return
+		}
+		cmd = exec.Command(junctionRunPath, binPath)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
@@ -125,7 +133,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 				coldStart = e2e - execTime
 			}
 		}
-	case "process", "docker", "python":
+	case "process", "docker", "python", "junction":
 		for _, line := range strings.Split(stderrBuf.String(), "\n") {
 			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
 				execTime, _ = strconv.ParseFloat(val, 64)
@@ -153,9 +161,14 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, or docker")
+	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, docker, or junction")
+	flag.StringVar(&junctionRunPath, "junction-run", "", "Path to junction_run binary (required when runtime=junction)")
 	portFlag := flag.String("port", "8080", "The port for the gateway to listen on")
 	flag.Parse()
+
+	if runtimeMode == "junction" && junctionRunPath == "" {
+		log.Fatal("-junction-run flag is required when runtime=junction")
+	}
 	port := fmt.Sprintf(":%s", *portFlag)
 
 	http.HandleFunc("/source/", sourceHandler)
