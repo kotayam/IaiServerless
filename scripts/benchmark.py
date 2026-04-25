@@ -15,8 +15,8 @@ C_SAMPLES = ["c/hello", "c/prime", "c/weather", "c/weather_fmt", "c/json_builder
 PYTHON_SAMPLES = ["python/hello", "python/prime", "python/weather", "python/weather_fmt", "python/alloc_stress", "python/multi_req"]
 
 # Samples that work under Junction (no networking)
-JUNCTION_C_SAMPLES = ["c/hello", "c/prime", "c/json_builder", "c/alloc_stress"]
-JUNCTION_PYTHON_SAMPLES = ["python/hello", "python/prime", "python/alloc_stress"]
+JUNCTION_C_SAMPLES = ["c/hello", "c/json_builder", "c/alloc_stress"]
+JUNCTION_PYTHON_SAMPLES = ["python/hello", "python/alloc_stress"]
 
 class BenchmarkResult:
     def __init__(self, name, cold_start, exec_time, e2e_latency):
