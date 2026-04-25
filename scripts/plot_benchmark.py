@@ -73,7 +73,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             elif vals[j] > 0:
                 label = format_val(vals[j], ylabel)
                 ax.text(b.get_x() + b.get_width() / 2, vals[j],
-                        label, ha="center", va="bottom", fontsize=7,
+                        label, ha="center", va="bottom", fontsize=8.5,
                         color=color, fontweight="bold")
 
     ax.set_yscale("log")
@@ -94,8 +94,8 @@ def format_val(v, ylabel):
         return "-"
     if ylabel == "KB":
         if v >= 1024:
-            return f"{v/1024:.0f}M"
-        return f"{v:.0f}K"
+            return f"{v/1024:.1f}M"
+        return f"{v:.1f}"
     if v >= 100:
         return f"{int(v)}"
     if v >= 1:
