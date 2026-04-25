@@ -21,4 +21,5 @@ __pycache__/
 *.pyc
 
 # plot
-*.png
+scripts/*.png
+scripts/*.txt
