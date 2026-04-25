@@ -8,8 +8,8 @@ import numpy as np
 from collections import OrderedDict
 
 COLORS = {
-    "process": "#4CAF50", "python": "#FF9800", "kvm": "#2196F3",
-    "docker": "#F44336", "junction": "#9C27B0",
+    "process": "#4CAF50", "python": "#FF9800", "kvm": "#F44336",
+    "docker": "#2196F3", "junction": "#9C27B0",
 }
 
 def load_csv(path):
