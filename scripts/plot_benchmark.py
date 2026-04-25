@@ -42,9 +42,9 @@ def plot_metric(data, metric, title, ylabel, out_path):
     runtimes = get_runtimes(data)
     x = np.arange(len(functions))
     n = len(runtimes)
-    width = 0.8 / n
+    width = 0.6 / n
 
-    fig, ax = plt.subplots(figsize=(max(14, len(functions) * 1.2), 6))
+    fig, ax = plt.subplots(figsize=(max(16, len(functions) * 1.5), 7))
 
     for i, rt in enumerate(runtimes):
         vals = []
@@ -55,7 +55,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             mask.append(v is not None)
 
         color = COLORS.get(rt, "#999")
-        pos = x + i * width - 0.4 + width / 2
+        pos = x + i * width - 0.3 + width / 2
         if rt == "kvm":
             bars = ax.bar(pos, vals, width,
                           label=rt, color=color, edgecolor=color, linewidth=1.2, zorder=3)
@@ -68,6 +68,11 @@ def plot_metric(data, metric, title, ylabel, out_path):
         for j, b in enumerate(bars):
             if not mask[j]:
                 b.set_alpha(0.15)
+            elif vals[j] > 0:
+                label = format_val(vals[j], ylabel)
+                ax.text(b.get_x() + b.get_width() / 2, vals[j],
+                        label, ha="center", va="bottom", fontsize=5.5,
+                        color=color, fontweight="bold")
 
     ax.set_yscale("log")
     ax.set_title(title, fontsize=14, fontweight="bold")
