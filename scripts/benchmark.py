@@ -25,6 +25,42 @@ class BenchmarkResult:
         self.exec_time = exec_time
         self.e2e_latency = e2e_latency
 
+def get_binary_size(runtime, sample):
+    """Return binary/image size in bytes for a given runtime and sample, or None."""
+    safeName = sample
+    try:
+        if runtime in ("process", "junction"):
+            if sample.startswith("python/"):
+                path = f"samples/{sample}.py"
+            else:
+                path = f"samples/{sample}_proc"
+            return os.path.getsize(path)
+        elif runtime == "kvm":
+            return os.path.getsize(f"samples/{sample}.elf")
+        elif runtime == "python":
+            return os.path.getsize(f"samples/{sample}.py")
+        elif runtime == "docker":
+            name = f"iai_{sample.replace('/', '_')}"
+            result = subprocess.run(
+                ["docker", "inspect", "--format", "{{.Size}}", name],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                return int(result.stdout.strip())
+    except (OSError, ValueError):
+        pass
+    return None
+
+def format_size(size_bytes):
+    """Format bytes into human-readable string."""
+    if size_bytes is None:
+        return "N/A"
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+
 def start_gateway(runtime, port, junction_build=None):
     print(f"[*] Starting Gateway with runtime: {runtime}")
     # Run 'go build' first to ensure we aren't measuring compilation time
@@ -166,37 +202,39 @@ def main():
     c_runtimes_display = C_RUNTIMES + (["junction"] if args.junction else [])
     for sample in C_SAMPLES:
         print(f"\nFUNCTION: /{sample}")
-        print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
-        print(f"----------|------------------|-----------------|------------------")
+        print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg) | Binary Size")
+        print(f"----------|------------------|-----------------|------------------|------------")
         for rt in c_runtimes_display:
             res = final_report.get(rt, {}).get(sample, [])
+            size = format_size(get_binary_size(rt, sample))
             if res:
                 avg_cold = statistics.mean([r.cold_start for r in res])
                 avg_exec = statistics.mean([r.exec_time for r in res])
                 avg_e2e  = statistics.mean([r.e2e_latency for r in res])
-                print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
+                print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms | {size}")
             elif rt == "junction" and sample not in JUNCTION_C_SAMPLES:
-                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>17}")
+                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>16} | {size}")
             else:
-                print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
+                print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>16} | {size}")
 
     print("\n--- PYTHON FUNCTIONS ---")
     py_runtimes_display = PYTHON_RUNTIMES + (["junction"] if args.junction else [])
     for sample in PYTHON_SAMPLES:
         print(f"\nFUNCTION: /{sample}")
-        print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg)")
-        print(f"----------|------------------|-----------------|------------------")
+        print(f"Runtime   | Cold Start (Avg) | Execution (Avg) | E2E Client (Avg) | Binary Size")
+        print(f"----------|------------------|-----------------|------------------|------------")
         for rt in py_runtimes_display:
             res = final_report.get(rt, {}).get(sample, [])
+            size = format_size(get_binary_size(rt, sample))
             if res:
                 avg_cold = statistics.mean([r.cold_start for r in res])
                 avg_exec = statistics.mean([r.exec_time for r in res])
                 avg_e2e  = statistics.mean([r.e2e_latency for r in res])
-                print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms")
+                print(f"{rt:9} | {avg_cold:13.3f} ms | {avg_exec:12.3f} ms | {avg_e2e:14.3f} ms | {size}")
             elif rt == "junction" and sample not in JUNCTION_PYTHON_SAMPLES:
-                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>17}")
+                print(f"{rt:9} | {'SKIPPED':>16} | {'SKIPPED':>15} | {'SKIPPED':>16} | {size}")
             else:
-                print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>17}")
+                print(f"{rt:9} | {'FAILED':>16} | {'FAILED':>15} | {'FAILED':>16} | {size}")
 
 if __name__ == "__main__":
     main()
