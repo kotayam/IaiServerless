@@ -71,7 +71,7 @@ def start_gateway(runtime, port, junction_build=None):
     
     cmd = ["./gateway_bin", f"-runtime={runtime}", f"-port={port}"]
     if junction_build:
-        cmd.append(f"-junction-build={junction_build}")
+        cmd.append(f"-junction-build={os.path.abspath(junction_build)}")
     process = subprocess.Popen(cmd, cwd="gateway", stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     # Wait for gateway to be ready
