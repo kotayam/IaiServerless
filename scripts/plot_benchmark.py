@@ -34,34 +34,77 @@ def get_runtimes(data):
                 rts.append(rt)
     return rts
 
+def auto_cutoff(data, metric):
+    """Pick a y-axis cutoff: 1.5x the max non-docker/non-skipped value."""
+    vals = []
+    for fn, runtimes in data.items():
+        for rt, m in runtimes.items():
+            v = m.get(metric)
+            if v is not None and rt != "docker":
+                vals.append(v)
+    if not vals:
+        return None
+    return max(vals) * 1.5
+
+def format_val(v, ylabel):
+    if ylabel == "KB":
+        if v >= 1024:
+            return f"{v/1024:.1f}MB"
+        return f"{v:.0f}KB"
+    if v >= 1000:
+        return f"{v:.0f}"
+    return f"{v:.1f}"
+
 def plot_metric(data, metric, title, ylabel, out_path):
     functions = list(data.keys())
     runtimes = get_runtimes(data)
     x = np.arange(len(functions))
     n = len(runtimes)
     width = 0.8 / n
+    cutoff = auto_cutoff(data, metric)
 
     fig, ax = plt.subplots(figsize=(max(14, len(functions) * 1.2), 6))
 
     for i, rt in enumerate(runtimes):
-        vals = []
+        vals_raw = []
         mask = []
         for fn in functions:
             v = data[fn].get(rt, {}).get(metric)
-            vals.append(v if v is not None else 0)
+            vals_raw.append(v if v is not None else 0)
             mask.append(v is not None)
+
+        # Clip bars at cutoff
+        vals_clipped = [min(v, cutoff) if cutoff and v > 0 else v for v in vals_raw]
+
         color = COLORS.get(rt, "#999")
+        pos = x + i * width - 0.4 + width / 2
         if rt == "kvm":
-            bars = ax.bar(x + i * width - 0.4 + width / 2, vals, width,
+            bars = ax.bar(pos, vals_clipped, width,
                           label=rt, color=color, edgecolor=color, linewidth=1.2, zorder=3)
         else:
             plt.rcParams['hatch.color'] = color
-            bars = ax.bar(x + i * width - 0.4 + width / 2, vals, width,
+            bars = ax.bar(pos, vals_clipped, width,
                           label=rt, facecolor="none", edgecolor=color,
                           hatch="////", linewidth=1.2, zorder=3)
+
+        # Annotate clipped bars with actual value
         for j, b in enumerate(bars):
             if not mask[j]:
                 b.set_alpha(0.15)
+            elif cutoff and vals_raw[j] > cutoff:
+                ax.text(b.get_x() + b.get_width() / 2, cutoff * 0.97,
+                        format_val(vals_raw[j], ylabel),
+                        ha="center", va="top", fontsize=6, fontweight="bold",
+                        color=color, rotation=90)
+
+    if cutoff:
+        ax.set_ylim(0, cutoff)
+        # Draw break marks
+        ax.spines['top'].set_visible(False)
+        d = 0.01
+        kwargs = dict(transform=ax.transAxes, color='k', clip_on=False, linewidth=1)
+        ax.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)
+        ax.plot((-d, +d), (1 - d, 1 + d), **kwargs)
 
     ax.set_title(title, fontsize=14, fontweight="bold")
     ax.set_ylabel(ylabel)
