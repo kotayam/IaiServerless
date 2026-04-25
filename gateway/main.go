@@ -40,10 +40,16 @@ func sourceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // nativeBinPath returns the executable, extra arguments, and the path to check for existence.
-func nativeBinPath(safeName string) (bin string, args []string, checkPath string) {
+func nativeBinPath(safeName string, useAbsPath bool) (bin string, args []string, checkPath string) {
 	if strings.HasPrefix(safeName, "python/") {
 		scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
-		return "python3", []string{"../samples/python/runner.py", scriptPath}, scriptPath
+		python := "python3"
+		if useAbsPath {
+			if p, err := exec.LookPath("python3"); err == nil {
+				python = p
+			}
+		}
+		return python, []string{"../samples/python/runner.py", scriptPath}, scriptPath
 	}
 	binPath := fmt.Sprintf("../samples/%s_proc", safeName)
 	return binPath, nil, binPath
@@ -73,7 +79,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cmd = exec.Command("../host/host_loader", binPath)
 	case "native":
-		bin, args, checkPath := nativeBinPath(safeName)
+		bin, args, checkPath := nativeBinPath(safeName, false)
 		if _, err := os.Stat(checkPath); os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Function not found: %s", checkPath), http.StatusNotFound)
 			return
@@ -98,7 +104,7 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
 	case "junction":
-		bin, args, checkPath := nativeBinPath(safeName)
+		bin, args, checkPath := nativeBinPath(safeName, true)
 		if _, err := os.Stat(checkPath); os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Function not found: %s", checkPath), http.StatusNotFound)
 			return
