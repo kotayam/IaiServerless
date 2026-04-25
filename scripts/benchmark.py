@@ -27,7 +27,6 @@ class BenchmarkResult:
 
 def get_binary_size(runtime, sample):
     """Return binary/image size in bytes for a given runtime and sample, or None."""
-    safeName = sample
     try:
         if runtime in ("process", "junction"):
             if sample.startswith("python/"):
@@ -38,6 +37,10 @@ def get_binary_size(runtime, sample):
         elif runtime == "kvm":
             return os.path.getsize(f"samples/{sample}.elf")
         elif runtime == "python":
+            result = subprocess.run(["which", "python3"], capture_output=True, text=True)
+            if result.returncode == 0:
+                interp = os.path.realpath(result.stdout.strip())
+                return os.path.getsize(interp) + os.path.getsize(f"samples/{sample}.py")
             return os.path.getsize(f"samples/{sample}.py")
         elif runtime == "docker":
             name = f"iai_{sample.replace('/', '_')}"
