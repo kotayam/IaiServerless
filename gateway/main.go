@@ -15,6 +15,7 @@ import (
 )
 
 var runtimeMode string
+var junctionBuildPath string
 
 func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
@@ -36,6 +37,22 @@ func sourceHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Write(data)
+}
+
+// nativeBinPath returns the executable, extra arguments, and the path to check for existence.
+func nativeBinPath(safeName string, useAbsPath bool) (bin string, args []string, checkPath string) {
+	if strings.HasPrefix(safeName, "python/") {
+		scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
+		python := "python3"
+		if useAbsPath {
+			if p, err := exec.LookPath("python3"); err == nil {
+				python = p
+			}
+		}
+		return python, []string{"../samples/python/runner.py", scriptPath}, scriptPath
+	}
+	binPath := fmt.Sprintf("../samples/%s_proc", safeName)
+	return binPath, nil, binPath
 }
 
 func invokeHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,21 +79,12 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cmd = exec.Command("../host/host_loader", binPath)
 	case "native":
-		if strings.HasPrefix(safeName, "python/") {
-			scriptPath := fmt.Sprintf("../samples/%s.py", safeName)
-			if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-				http.Error(w, fmt.Sprintf("Function script not found: %s", scriptPath), http.StatusNotFound)
-				return
-			}
-			cmd = exec.Command("python3", "../samples/python/runner.py", scriptPath)
-		} else {
-			binPath := fmt.Sprintf("../samples/%s_proc", safeName)
-			if _, err := os.Stat(binPath); os.IsNotExist(err) {
-				http.Error(w, fmt.Sprintf("Function binary not found: %s", binPath), http.StatusNotFound)
-				return
-			}
-			cmd = exec.Command(binPath)
+		bin, args, checkPath := nativeBinPath(safeName, false)
+		if _, err := os.Stat(checkPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function not found: %s", checkPath), http.StatusNotFound)
+			return
 		}
+		cmd = exec.Command(bin, args...)
 	case "process":
 		binPath := fmt.Sprintf("../samples/%s_proc", safeName)
 		if _, err := os.Stat(binPath); os.IsNotExist(err) {
@@ -95,6 +103,16 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 		// Include language in container name to avoid collisions (e.g., iai_c_hello, iai_cpp_test)
 		containerName := fmt.Sprintf("iai_%s", strings.ReplaceAll(safeName, "/", "_"))
 		cmd = exec.Command("docker", "run", "--rm", "--network=host", "-i", containerName)
+	case "junction":
+		bin, args, checkPath := nativeBinPath(safeName, true)
+		if _, err := os.Stat(checkPath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("Function not found: %s", checkPath), http.StatusNotFound)
+			return
+		}
+		junctionRun := junctionBuildPath + "/junction/junction_run"
+		caladanConfig := junctionBuildPath + "/junction/caladan_test.config"
+		jArgs := append([]string{caladanConfig, "--", bin}, args...)
+		cmd = exec.Command(junctionRun, jArgs...)
 	default:
 		http.Error(w, "Invalid runtime mode configured", http.StatusInternalServerError)
 		return
@@ -132,6 +150,14 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 				coldStart = e2e - execTime
 			}
 		}
+	case "junction":
+		// Junction merges child stderr into stdout
+		for _, line := range strings.Split(stdoutBuf.String(), "\n") {
+			if val, ok := strings.CutPrefix(line, "X-Exec-Time: "); ok {
+				execTime, _ = strconv.ParseFloat(val, 64)
+				coldStart = e2e - execTime
+			}
+		}
 	}
 
 	// Set timing headers
@@ -153,9 +179,14 @@ func invokeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, or docker")
+	flag.StringVar(&runtimeMode, "runtime", "kvm", "Execution runtime: kvm, process, docker, or junction")
+	flag.StringVar(&junctionBuildPath, "junction-build", "", "Path to junction build directory (required when runtime=junction)")
 	portFlag := flag.String("port", "8080", "The port for the gateway to listen on")
 	flag.Parse()
+
+	if runtimeMode == "junction" && junctionBuildPath == "" {
+		log.Fatal("-junction-build flag is required when runtime=junction")
+	}
 	port := fmt.Sprintf(":%s", *portFlag)
 
 	http.HandleFunc("/source/", sourceHandler)

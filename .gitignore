@@ -19,3 +19,7 @@ external/python-port/build
 # Python
 __pycache__/
 *.pyc
+
+# plot
+scripts/*.png
+scripts/*.txt

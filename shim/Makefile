@@ -2,7 +2,7 @@
 
 CC = gcc
 AR = ar
-CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra
+CFLAGS = -ffreestanding -nostdlib -m64 -O2 -Wall -Wextra -U_FORTIFY_SOURCE
 
 SRCS_C = hypercall.c unistd.c netdb.c string.c stdlib.c stdio.c
 SRCS_S = start.S setjmp.S

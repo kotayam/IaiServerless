@@ -1,11 +1,15 @@
-FROM debian:bookworm-slim
+FROM alpine:3.20 AS build
 
-RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache gcc musl-dev
 
 ARG SOURCE
 
 COPY ${SOURCE} timing.c /src/
 
 RUN gcc -O2 -o /function /src/${SOURCE} /src/timing.c
+
+FROM alpine:3.20
+
+COPY --from=build /function /function
 
 ENTRYPOINT ["/function"]

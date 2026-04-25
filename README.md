@@ -8,20 +8,20 @@ A unikernel-based serverless runtime that executes functions inside lightweight 
 
 ## Features
 
-- **Fast Cold Starts**: KVM unikernel boots in ~20ms, beating native Python process launch (43ms) by 2.2x
+- **Fast Cold Starts**: KVM unikernel boots in ~20ms, beating native Python process launch (21ms) with full VM isolation
 - **VM Isolation**: Full KVM-level isolation without container overhead
 - **Multi-Language**: Supports C and Python (via MicroPython unikernel)
 - **Stdin Support**: Functions accept input via HTTP POST body
 - **Inter-Function Calls**: Functions can call other functions via HTTP
-- **Three Runtime Modes**: Compare KVM, native process, and Docker side-by-side
+- **Five Runtime Modes**: Compare KVM, native process, Docker, Junction (libOS), and native Python side-by-side
 
 ## Directories
 
 - **host/** — KVM-based host loader that boots a microVM, loads an ELF binary, and proxies syscalls via hypercalls
 - **shim/** — Freestanding shim library linked into guest binaries, providing implementations of standard C library headers (`string.h`, `stdlib.h`, `stdio.h`, `unistd.h`, `netdb.h`, `setjmp.h`) that forward calls to the host via I/O port hypercalls
 - **samples/** — Sample serverless functions in C and Python, built for three targets: KVM (`.elf`), native process (`_proc`), and Docker
-- **gateway/** — HTTP gateway that dispatches function invocations to the configured runtime (native, kvm, docker)
-- **scripts/** — Benchmark and test utilities
+- **gateway/** — HTTP gateway that dispatches function invocations to the configured runtime (native, kvm, docker, junction)
+- **scripts/** — Benchmark, test, and graphing utilities
 - **external/** — MicroPython port for unikernel execution
 
 ## Sample Functions
@@ -30,81 +30,155 @@ A unikernel-based serverless runtime that executes functions inside lightweight 
 
 **Python Functions**: `hello`, `prime`, `weather`, `weather_fmt`, `alloc_stress`, `multi_req`, `weather_parser`
 
+## Prerequisites
+
+- `gcc`, `ld`, `make`, `go`, `docker`, `python3`
+- Linux with KVM support (`/dev/kvm`)
+- (Optional) [Junction](https://github.com/JunctionOS/junction) for the junction runtime
+
 ## Building
 
-Requires: `gcc`, `ld`, `make`, `go`, `docker`
-
 ```bash
+# Initialize MicroPython submodule (first time only)
+git submodule update --init external/micropython
+
+# Build host loader, shim library, MicroPython unikernel, and all KVM sample binaries
 make
-```
 
-This builds the host loader, shim library, MicroPython unikernel, and all sample binaries.
-
-To build native process and Docker images:
-
-```bash
+# Build native process binaries and Docker images
 make -C samples proc docker-all
 ```
 
 ## Quick Start
 
-Run the interactive demo UI:
+### Run the Interactive Demo UI
 
 ```bash
 ./scripts/demo.sh
 ```
 
-Then open http://localhost:8081 in your browser to compare runtimes side-by-side.
+Open http://localhost:8081 in your browser to compare native, KVM, and Docker runtimes side-by-side.
+
+### Run a Single Function (KVM)
+
+```bash
+./scripts/run_sample.sh c/hello.elf
+```
+
+### Try the Serverless Experience
+
+```bash
+cd gateway && ./gateway -runtime=kvm
+```
+
+Then invoke functions via HTTP:
+
+```bash
+# GET request
+curl http://localhost:8080/c/hello
+
+# POST with input (e.g., find the 10000th prime)
+curl -X POST -d "10000" http://localhost:8080/c/prime
+```
+
+## Gateway Runtimes
+
+The gateway supports multiple runtimes via the `-runtime` flag:
+
+| Flag | Description |
+|------|-------------|
+| `-runtime=native` | Auto-selects: `process` for `c/*`, `python3` for `python/*` |
+| `-runtime=kvm` | Runs `.elf` binaries in KVM microVM |
+| `-runtime=process` | Runs `_proc` binaries as native Linux processes |
+| `-runtime=python` | Runs `.py` scripts with system `python3` |
+| `-runtime=docker` | Runs functions in Docker containers |
+| `-runtime=junction` | Runs native binaries under Junction libOS (requires `-junction-build`) |
+
+**Junction example:**
+
+```bash
+cd gateway && go run main.go -runtime=junction -junction-build=/path/to/junction/build
+```
 
 ## Running the Benchmark
 
 ```bash
+# Standard benchmark (native, KVM, Docker) — 30 requests per function
 ./scripts/benchmark.py
+
+# Custom number of requests
+./scripts/benchmark.py 100
+
+# Include Junction runtime
+./scripts/benchmark.py --junction /path/to/junction/build
+
+# Custom port
+./scripts/benchmark.py --port 9090
+
+# All options combined
+./scripts/benchmark.py 100 --junction /path/to/junction/build --port 9090
 ```
 
-Runs 30 requests per function across all runtimes and prints a comparative report of cold start, execution, and end-to-end latency.
+The benchmark automatically:
+1. Builds native process binaries and Docker images
+2. Starts/stops gateways for each runtime
+3. Prints a comparative report with cold start, execution time, E2E latency, and binary size
+4. Exports results to `scripts/benchmark_result.csv`
 
-To specify the number of requests or a custom gateway port:
+### Generating Graphs
+
+After running the benchmark (or using an existing CSV):
 
 ```bash
-./scripts/benchmark.py 100
-./scripts/benchmark.py --port 9090
-./scripts/benchmark.py 100 --port 9090
+python3 scripts/plot_benchmark.py
 ```
 
-## Performance Highlights
+This generates four PNG graphs in `scripts/`:
+- `bench_cold_start.png` — Cold start latency comparison
+- `bench_exec_time.png` — Execution time comparison
+- `bench_e2e.png` — End-to-end latency comparison
+- `bench_binary_size.png` — Binary/image size comparison
 
-**KVM vs Native Python** (cold start):
-- python/hello: **19.8ms** (KVM) vs 43.5ms (native) — **2.2x faster**
-- python/weather: **21.3ms** (KVM) vs 44.9ms (native) — **2.1x faster**
+To plot from a specific CSV:
 
-**Native C Process** (cold start):
-- c/hello: **0.5ms** — 40x faster than KVM, 87x faster than native Python
+```bash
+python3 scripts/plot_benchmark.py path/to/benchmark_result.csv
+```
 
-**Docker** (cold start):
-- 130-180ms across all functions — slowest option
+Requires `matplotlib` (`sudo apt install python3-matplotlib`).
 
 ## Testing
 
-Start the gateway manually, then run the test script:
-
 ```bash
-cd gateway && go run main.go -runtime=kvm
+# Test all default endpoints against a running gateway
 ./scripts/test_gateway.py
-```
 
-To test specific endpoints or use a custom port:
-
-```bash
+# Test specific endpoints
 ./scripts/test_gateway.py c/hello python/prime
+
+# Custom port
 ./scripts/test_gateway.py --port 9090
 ```
 
-To run a single function with the KVM runtime directly:
+Each test displays cold start, execution time, and E2E latency.
 
-```bash
-./scripts/run_sample.sh <binary_name.elf>
-```
+## Performance Highlights (30 requests, CloudLab)
+
+**Cold Start:**
+
+| Runtime | c/hello | python/hello |
+|---------|---------|-------------|
+| Native process | 1.3 ms | 21.2 ms |
+| **KVM** | **20.2 ms** | **20.5 ms** |
+| Junction | 30.6 ms | 63.1 ms |
+| Docker | 177.1 ms | 276.8 ms |
+
+**Key Insights:**
+- KVM cold start (~20ms) matches native Python and provides full VM isolation
+- KVM MicroPython unikernel is 262 KB vs 7.7 MB for CPython — 30x smaller
+- Native C process has sub-1.5ms cold start
+- Docker is 9-14x slower than KVM on cold start
+- Network-bound functions converge across runtimes (execution time dominated by I/O)
 
 ## Architecture
 

@@ -436,7 +436,10 @@ uint64_t load_elf(struct vm *vm, const char *filename) {
   for (int i = 0; i < ehdr.e_phnum; i++) {
     // Move to the offset of the current program header
     lseek(fd, ehdr.e_phoff + (i * sizeof(phdr)), SEEK_SET);
-    read(fd, &phdr, sizeof(phdr));
+    if (read(fd, &phdr, sizeof(phdr)) != sizeof(phdr)) {
+      fprintf(stderr, "Error: Failed to read program header.\n");
+      exit(1);
+    }
 
     // We only care about PT_LOAD segments (actual code/data to map to RAM)
     if (phdr.p_type == PT_LOAD) {
@@ -450,7 +453,10 @@ uint64_t load_elf(struct vm *vm, const char *filename) {
 
       // Copy the data into the VM's physical memory space
       if (phdr.p_filesz > 0) {
-        read(fd, vm->mem + phdr.p_paddr, phdr.p_filesz);
+        if (read(fd, vm->mem + phdr.p_paddr, phdr.p_filesz) != (ssize_t)phdr.p_filesz) {
+          fprintf(stderr, "Error: Failed to read ELF segment data.\n");
+          exit(1);
+        }
       }
 
       // Zero out the BSS section (uninitialized variables)
