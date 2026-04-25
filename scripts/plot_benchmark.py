@@ -40,11 +40,13 @@ def get_runtimes(data):
 def plot_metric(data, metric, title, ylabel, out_path):
     functions = list(data.keys())
     runtimes = get_runtimes(data)
-    x = np.arange(len(functions)) * 1.5  # more space between function groups
+    x = np.arange(len(functions)) * 2.0  # space between function groups
     n = len(runtimes)
-    width = 0.8 / n
+    width = 0.25
+    gap = 0.08  # gap between bars within a group
+    group_width = n * width + (n - 1) * gap
 
-    fig, ax = plt.subplots(figsize=(max(18, len(functions) * 2), 7))
+    fig, ax = plt.subplots(figsize=(max(18, len(functions) * 2.2), 7))
 
     for i, rt in enumerate(runtimes):
         vals = []
@@ -55,7 +57,7 @@ def plot_metric(data, metric, title, ylabel, out_path):
             mask.append(v is not None)
 
         color = COLORS.get(rt, "#999")
-        pos = x + i * width - (n * width / 2) + width / 2
+        pos = x + i * (width + gap) - group_width / 2 + width / 2
         if rt == "kvm":
             bars = ax.bar(pos, vals, width,
                           label=rt, color=color, edgecolor=color, linewidth=1.2, zorder=3)
