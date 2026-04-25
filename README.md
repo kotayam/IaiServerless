@@ -36,8 +36,6 @@ A unikernel-based serverless runtime that executes functions inside lightweight 
 - Linux with KVM support (`/dev/kvm`)
 - (Optional) [Junction](https://github.com/JunctionOS/junction) for the junction runtime
 
-### System Setup (Ubuntu/CloudLab)
-
 ## Building
 
 ```bash
