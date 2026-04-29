@@ -237,7 +237,7 @@
       </div>
 
       <div class="col" id="col-kvm">
-        <h2>KVM Unikernel <span>:8082</span></h2>
+        <h2>KVM Unikernel <span>:9382</span></h2>
         <div class="status" id="kvm-status">—</div>
         <div class="metrics">
           <div class="metric">
@@ -258,7 +258,7 @@
       </div>
 
       <div class="col" id="col-docker">
-        <h2>Docker Container <span>:8083</span></h2>
+        <h2>Docker Container <span>:9383</span></h2>
         <div class="status" id="docker-status">—</div>
         <div class="metrics">
           <div class="metric">
@@ -287,18 +287,18 @@
     </div>
 
     <script>
-      const PORTS = { process: 8081, python: 8082, kvm: 8082, docker: 8083 };
+      const PORTS = { process: 9381, python: 9382, kvm: 9382, docker: 9383 };
       // KVM port is shared — kvm gateway handles both c/ and python/
       const RUNTIMES = [
         { id: "native", label: "native", portKey: null }, // resolved dynamically
-        { id: "kvm", label: "kvm", port: 8082 },
-        { id: "docker", label: "docker", port: 8083 },
+        { id: "kvm", label: "kvm", port: 9382 },
+        { id: "docker", label: "docker", port: 9383 },
       ];
 
       // Port layout (matches demo.sh):
-      // 8081 = native (c/* → process, python/* → python3)
-      // 8082 = kvm
-      // 8083 = docker
+      // 9381 = native (c/* → process, python/* → python3)
+      // 9382 = kvm
+      // 9383 = docker
       const PRIME_FUNCTIONS = ["c/prime", "python/prime"];
 
       function onFnChange() {
@@ -313,9 +313,9 @@
       }
 
       const PORT_MAP = {
-        native: () => 8081,
-        kvm: () => 8082,
-        docker: () => 8083,
+        native: () => 9381,
+        kvm: () => 9382,
+        docker: () => 9383,
       };
 
       function setStatus(id, cls, text) {
@@ -398,7 +398,7 @@
         btn.disabled = true;
 
         // Update native port label
-        document.getElementById("native-port").textContent = ":8081 (native)";
+        document.getElementById("native-port").textContent = ":9381 (native)";
 
         ["native", "kvm", "docker"].forEach(resetCol);
 
@@ -423,7 +423,7 @@
 
         // Fetch and display source code
         try {
-          const src = await fetch(`http://localhost:8081/source/${fn}`);
+          const src = await fetch(`http://localhost:9381/source/${fn}`);
           if (src.ok) {
             document.getElementById("sourceLabel").textContent =
               `source: ${fn}`;
