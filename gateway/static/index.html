@@ -1,262 +1,438 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>IaiServerless Demo</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 24px; }
-  h1 { font-size: 1.2rem; margin-bottom: 4px; color: #fff; }
-  p.sub { color: #666; font-size: 0.8rem; margin-bottom: 24px; }
+  <head>
+    <meta charset="UTF-8" />
+    <title>IaiServerless Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: monospace;
+        background: #0f0f0f;
+        color: #e0e0e0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 1.2rem;
+        margin-bottom: 4px;
+        color: #fff;
+      }
+      p.sub {
+        color: #666;
+        font-size: 0.8rem;
+        margin-bottom: 24px;
+      }
 
-  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
-  select, button, input[type=text] {
-    background: #1e1e1e; color: #e0e0e0; border: 1px solid #333;
-    padding: 8px 14px; font-family: monospace; font-size: 0.9rem; cursor: pointer;
-  }
-  input[type=text] { cursor: text; width: 100px; }
-  button { background: #2a6496; border-color: #2a6496; color: #fff; }
-  button:hover { background: #3a7ab6; }
-  button:disabled { background: #333; border-color: #333; color: #666; cursor: default; }
+      .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+      select,
+      button,
+      input[type="text"] {
+        background: #1e1e1e;
+        color: #e0e0e0;
+        border: 1px solid #333;
+        padding: 8px 14px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      input[type="text"] {
+        cursor: text;
+        width: 100px;
+      }
+      button {
+        background: #2a6496;
+        border-color: #2a6496;
+        color: #fff;
+      }
+      button:hover {
+        background: #3a7ab6;
+      }
+      button:disabled {
+        background: #333;
+        border-color: #333;
+        color: #666;
+        cursor: default;
+      }
 
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .col { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 24px; }
-  .col h2 { font-size: 1rem; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #2a2a2a; }
-  .col h2 span { font-size: 0.8rem; color: #666; display: block; margin-top: 4px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      .col {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 4px;
+        padding: 24px;
+      }
+      .col h2 {
+        font-size: 1rem;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #2a2a2a;
+      }
+      .col h2 span {
+        font-size: 0.8rem;
+        color: #666;
+        display: block;
+        margin-top: 4px;
+      }
 
-  .metrics { margin-bottom: 16px; }
-  .metric { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 5px 0; }
-  .metric .label { color: #888; }
-  .metric .value { color: #4ec9b0; font-weight: bold; }
-  .metric .value.pending { color: #555; }
+      .metrics {
+        margin-bottom: 16px;
+      }
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        padding: 5px 0;
+      }
+      .metric .label {
+        color: #888;
+      }
+      .metric .value {
+        color: #4ec9b0;
+        font-weight: bold;
+      }
+      .metric .value.pending {
+        color: #555;
+      }
 
-  .bar-wrap { height: 8px; background: #2a2a2a; border-radius: 3px; margin: 10px 0 16px; overflow: hidden; }
-  .bar { height: 100%; background: #2a6496; border-radius: 3px; width: 0; transition: width 0.4s ease; }
+      .bar-wrap {
+        height: 8px;
+        background: #2a2a2a;
+        border-radius: 3px;
+        margin: 10px 0 16px;
+        overflow: hidden;
+      }
+      .bar {
+        height: 100%;
+        background: #2a6496;
+        border-radius: 3px;
+        width: 0;
+        transition: width 0.4s ease;
+      }
 
-  .response { font-size: 0.78rem; color: #888; background: #111; border: 1px solid #222;
-    padding: 12px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
-  .response.error { color: #e06c75; }
-  .response.empty { color: #444; font-style: italic; }
+      .response {
+        font-size: 0.78rem;
+        color: #888;
+        background: #111;
+        border: 1px solid #222;
+        padding: 12px;
+        max-height: 220px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .response.error {
+        color: #e06c75;
+      }
+      .response.empty {
+        color: #444;
+        font-style: italic;
+      }
 
-  .status { font-size: 0.75rem; margin-bottom: 8px; min-height: 1.2em; }
-  .status.running { color: #e5c07b; }
-  .status.done { color: #98c379; }
-  .status.err { color: #e06c75; }
+      .status {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
+        min-height: 1.2em;
+      }
+      .status.running {
+        color: #e5c07b;
+      }
+      .status.done {
+        color: #98c379;
+      }
+      .status.err {
+        color: #e06c75;
+      }
 
-  .source-panel { margin-top: 24px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 20px; }
-  .source-panel h3 { font-size: 0.85rem; color: #888; margin-bottom: 12px; }
-  .source-panel pre { font-size: 0.78rem; color: #ccc; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; margin: 0; }
+      .source-panel {
+        margin-top: 24px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 4px;
+        padding: 20px;
+      }
+      .source-panel h3 {
+        font-size: 0.85rem;
+        color: #888;
+        margin-bottom: 12px;
+      }
+      .source-panel pre {
+        font-size: 0.78rem;
+        color: #ccc;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 400px;
+        overflow-y: auto;
+        margin: 0;
+      }
 
-  optgroup { color: #888; }
-</style>
-</head>
-<body>
+      optgroup {
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>IaiServerless</h1>
+    <p class="sub">
+      Unikernel-based serverless runtime — same function, four runtimes, live
+      latency comparison
+    </p>
 
-<h1>IaiServerless</h1>
-<p class="sub">Unikernel-based serverless runtime — same function, four runtimes, live latency comparison</p>
-
-<div class="controls">
-  <select id="fnSelect" onchange="onFnChange()">
-    <optgroup label="C Functions">
-      <option value="c/hello">c/hello</option>
-      <option value="c/prime">c/prime</option>
-      <option value="c/weather">c/weather 🌐</option>
-      <option value="c/weather_fmt">c/weather_fmt 🌐🔗</option>
-      <option value="c/json_builder">c/json_builder</option>
-      <option value="c/alloc_stress">c/alloc_stress</option>
-    </optgroup>
-    <optgroup label="Python Functions">
-      <option value="python/hello">python/hello</option>
-      <option value="python/prime">python/prime</option>
-      <option value="python/weather">python/weather 🌐</option>
-      <option value="python/weather_fmt">python/weather_fmt 🌐🔗</option>
-      <option value="python/alloc_stress">python/alloc_stress</option>
-    </optgroup>
-  </select>
-  <input type="text" id="fnInput" placeholder="N" style="display:none" />
-  <button id="runBtn" onclick="runAll()">▶ Run</button>
-</div>
-
-<div class="grid">
-  <div class="col" id="col-native">
-    <h2>Native Process <span id="native-port"></span></h2>
-    <div class="status" id="native-status">—</div>
-    <div class="metrics">
-      <div class="metric"><span class="label">Cold Start</span><span class="value pending" id="native-cold">—</span></div>
-      <div class="metric"><span class="label">Execution</span><span class="value pending" id="native-exec">—</span></div>
-      <div class="metric"><span class="label">E2E</span><span class="value pending" id="native-e2e">—</span></div>
+    <div class="controls">
+      <select id="fnSelect" onchange="onFnChange()">
+        <optgroup label="C Functions">
+          <option value="c/hello">c/hello</option>
+          <option value="c/prime">c/prime</option>
+          <option value="c/weather">c/weather 🌐</option>
+          <option value="c/weather_fmt">c/weather_fmt 🌐🔗</option>
+          <option value="c/json_builder">c/json_builder</option>
+          <option value="c/alloc_stress">c/alloc_stress</option>
+        </optgroup>
+        <optgroup label="Python Functions">
+          <option value="python/hello">python/hello</option>
+          <option value="python/prime">python/prime</option>
+          <option value="python/weather">python/weather 🌐</option>
+          <option value="python/weather_fmt">python/weather_fmt 🌐🔗</option>
+          <option value="python/alloc_stress">python/alloc_stress</option>
+        </optgroup>
+      </select>
+      <input type="text" id="fnInput" placeholder="N" style="display: none" />
+      <button id="runBtn" onclick="runAll()">▶ Run</button>
     </div>
-    <div class="bar-wrap"><div class="bar" id="native-bar"></div></div>
-    <div class="response empty" id="native-body">output will appear here</div>
-  </div>
 
-  <div class="col" id="col-kvm">
-    <h2>KVM Unikernel <span>:8082</span></h2>
-    <div class="status" id="kvm-status">—</div>
-    <div class="metrics">
-      <div class="metric"><span class="label">Cold Start</span><span class="value pending" id="kvm-cold">—</span></div>
-      <div class="metric"><span class="label">Execution</span><span class="value pending" id="kvm-exec">—</span></div>
-      <div class="metric"><span class="label">E2E</span><span class="value pending" id="kvm-e2e">—</span></div>
+    <div class="grid">
+      <div class="col" id="col-native">
+        <h2>Native Process <span id="native-port"></span></h2>
+        <div class="status" id="native-status">—</div>
+        <div class="metrics">
+          <div class="metric">
+            <span class="label">Cold Start</span
+            ><span class="value pending" id="native-cold">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">Execution</span
+            ><span class="value pending" id="native-exec">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">E2E</span
+            ><span class="value pending" id="native-e2e">—</span>
+          </div>
+        </div>
+        <div class="bar-wrap"><div class="bar" id="native-bar"></div></div>
+        <div class="response empty" id="native-body">
+          output will appear here
+        </div>
+      </div>
+
+      <div class="col" id="col-kvm">
+        <h2>KVM Unikernel <span>:9382</span></h2>
+        <div class="status" id="kvm-status">—</div>
+        <div class="metrics">
+          <div class="metric">
+            <span class="label">Cold Start</span
+            ><span class="value pending" id="kvm-cold">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">Execution</span
+            ><span class="value pending" id="kvm-exec">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">E2E</span
+            ><span class="value pending" id="kvm-e2e">—</span>
+          </div>
+        </div>
+        <div class="bar-wrap"><div class="bar" id="kvm-bar"></div></div>
+        <div class="response empty" id="kvm-body">output will appear here</div>
+      </div>
+
+      <div class="col" id="col-docker">
+        <h2>Docker Container <span>:9383</span></h2>
+        <div class="status" id="docker-status">—</div>
+        <div class="metrics">
+          <div class="metric">
+            <span class="label">Cold Start</span
+            ><span class="value pending" id="docker-cold">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">Execution</span
+            ><span class="value pending" id="docker-exec">—</span>
+          </div>
+          <div class="metric">
+            <span class="label">E2E</span
+            ><span class="value pending" id="docker-e2e">—</span>
+          </div>
+        </div>
+        <div class="bar-wrap"><div class="bar" id="docker-bar"></div></div>
+        <div class="response empty" id="docker-body">
+          output will appear here
+        </div>
+      </div>
     </div>
-    <div class="bar-wrap"><div class="bar" id="kvm-bar"></div></div>
-    <div class="response empty" id="kvm-body">output will appear here</div>
-  </div>
 
-  <div class="col" id="col-docker">
-    <h2>Docker Container <span>:8083</span></h2>
-    <div class="status" id="docker-status">—</div>
-    <div class="metrics">
-      <div class="metric"><span class="label">Cold Start</span><span class="value pending" id="docker-cold">—</span></div>
-      <div class="metric"><span class="label">Execution</span><span class="value pending" id="docker-exec">—</span></div>
-      <div class="metric"><span class="label">E2E</span><span class="value pending" id="docker-e2e">—</span></div>
+    <div class="source-panel" id="sourcePanel" style="display: none">
+      <h3 id="sourceLabel">source</h3>
+      <pre id="sourceCode"></pre>
     </div>
-    <div class="bar-wrap"><div class="bar" id="docker-bar"></div></div>
-    <div class="response empty" id="docker-body">output will appear here</div>
-  </div>
-</div>
 
-<div class="source-panel" id="sourcePanel" style="display:none">
-  <h3 id="sourceLabel">source</h3>
-  <pre id="sourceCode"></pre>
-</div>
+    <script>
+      const PORTS = { process: 9381, python: 9382, kvm: 9382, docker: 9383 };
+      // KVM port is shared — kvm gateway handles both c/ and python/
+      const RUNTIMES = [
+        { id: "native", label: "native", portKey: null }, // resolved dynamically
+        { id: "kvm", label: "kvm", port: 9382 },
+        { id: "docker", label: "docker", port: 9383 },
+      ];
 
-<script>
-const PORTS = { process: 8081, python: 8082, kvm: 8082, docker: 8083 };
-// KVM port is shared — kvm gateway handles both c/ and python/
-const RUNTIMES = [
-  { id: 'native', label: 'native', portKey: null },  // resolved dynamically
-  { id: 'kvm',    label: 'kvm',    port: 8082 },
-  { id: 'docker', label: 'docker', port: 8083 },
-];
+      // Port layout (matches demo.sh):
+      // 9381 = native (c/* → process, python/* → python3)
+      // 9382 = kvm
+      // 9383 = docker
+      const PRIME_FUNCTIONS = ["c/prime", "python/prime"];
 
-// Port layout (matches demo.sh):
-// 8081 = native (c/* → process, python/* → python3)
-// 8082 = kvm
-// 8083 = docker
-const PRIME_FUNCTIONS = ['c/prime', 'python/prime'];
+      function onFnChange() {
+        const fn = document.getElementById("fnSelect").value;
+        const inp = document.getElementById("fnInput");
+        if (PRIME_FUNCTIONS.includes(fn)) {
+          inp.style.display = "";
+          inp.placeholder = "N (default 10000)";
+        } else {
+          inp.style.display = "none";
+        }
+      }
 
-function onFnChange() {
-  const fn = document.getElementById('fnSelect').value;
-  const inp = document.getElementById('fnInput');
-  if (PRIME_FUNCTIONS.includes(fn)) {
-    inp.style.display = '';
-    inp.placeholder = 'N (default 10000)';
-  } else {
-    inp.style.display = 'none';
-  }
-}
+      const PORT_MAP = {
+        native: () => 9381,
+        kvm: () => 9382,
+        docker: () => 9383,
+      };
 
-const PORT_MAP = {
-  native: () => 8081,
-  kvm:    () => 8082,
-  docker: () => 8083,
-};
+      function setStatus(id, cls, text) {
+        const el = document.getElementById(id + "-status");
+        el.className = "status " + cls;
+        el.textContent = text;
+      }
 
-function setStatus(id, cls, text) {
-  const el = document.getElementById(id + '-status');
-  el.className = 'status ' + cls;
-  el.textContent = text;
-}
+      function setMetrics(id, cold, exec, e2e) {
+        document.getElementById(id + "-cold").textContent =
+          cold.toFixed(2) + " ms";
+        document.getElementById(id + "-exec").textContent =
+          exec.toFixed(2) + " ms";
+        document.getElementById(id + "-e2e").textContent =
+          e2e.toFixed(2) + " ms";
+        ["cold", "exec", "e2e"].forEach((k) => {
+          document.getElementById(id + "-" + k).classList.remove("pending");
+        });
+      }
 
-function setMetrics(id, cold, exec, e2e) {
-  document.getElementById(id + '-cold').textContent = cold.toFixed(2) + ' ms';
-  document.getElementById(id + '-exec').textContent = exec.toFixed(2) + ' ms';
-  document.getElementById(id + '-e2e').textContent  = e2e.toFixed(2)  + ' ms';
-  ['cold','exec','e2e'].forEach(k => {
-    document.getElementById(id + '-' + k).classList.remove('pending');
-  });
-}
+      function setBar(id, e2e, maxE2e) {
+        const pct = maxE2e > 0 ? Math.min((e2e / maxE2e) * 100, 100) : 0;
+        document.getElementById(id + "-bar").style.width = pct + "%";
+      }
 
-function setBar(id, e2e, maxE2e) {
-  const pct = maxE2e > 0 ? Math.min((e2e / maxE2e) * 100, 100) : 0;
-  document.getElementById(id + '-bar').style.width = pct + '%';
-}
+      function setBody(id, text, isError) {
+        const el = document.getElementById(id + "-body");
+        el.className = "response" + (isError ? " error" : "");
+        // Strip HTTP response line if present
+        el.textContent = text
+          .replace(/^HTTP\/1\.\d \d{3}[^\r\n]*\r?\n(\r?\n)?/, "")
+          .trim();
+      }
 
-function setBody(id, text, isError) {
-  const el = document.getElementById(id + '-body');
-  el.className = 'response' + (isError ? ' error' : '');
-  // Strip HTTP response line if present
-  el.textContent = text.replace(/^HTTP\/1\.\d \d{3}[^\r\n]*\r?\n(\r?\n)?/, '').trim();
-}
+      function resetCol(id) {
+        ["cold", "exec", "e2e"].forEach((k) => {
+          const el = document.getElementById(id + "-" + k);
+          el.textContent = "—";
+          el.classList.add("pending");
+        });
+        document.getElementById(id + "-bar").style.width = "0";
+        const body = document.getElementById(id + "-body");
+        body.className = "response empty";
+        body.textContent = "output will appear here";
+        setStatus(id, "", "—");
+      }
 
-function resetCol(id) {
-  ['cold','exec','e2e'].forEach(k => {
-    const el = document.getElementById(id + '-' + k);
-    el.textContent = '—';
-    el.classList.add('pending');
-  });
-  document.getElementById(id + '-bar').style.width = '0';
-  const body = document.getElementById(id + '-body');
-  body.className = 'response empty';
-  body.textContent = 'output will appear here';
-  setStatus(id, '', '—');
-}
+      async function fetchRuntime(id, port, fn) {
+        setStatus(id, "running", "running…");
+        const t0 = performance.now();
+        const isWeather = fn === "c/weather_fmt" || fn === "python/weather_fmt";
+        const isPrime = PRIME_FUNCTIONS.includes(fn);
+        const inputVal = document.getElementById("fnInput").value.trim();
+        let reqBody = undefined;
+        if (isWeather) reqBody = String(port);
+        else if (isPrime && inputVal) reqBody = inputVal;
+        try {
+          const resp = await fetch(`http://localhost:${port}/${fn}`, {
+            method: reqBody !== undefined ? "POST" : "GET",
+            body: reqBody,
+          });
+          const e2e = performance.now() - t0;
+          const cold = parseFloat(resp.headers.get("X-Cold-Start") || 0);
+          const exec = parseFloat(resp.headers.get("X-Exec-Time") || 0);
+          const body = await resp.text();
+          setMetrics(id, cold, exec, e2e);
+          setBody(id, body, !resp.ok);
+          setStatus(id, "done", `done (${e2e.toFixed(0)} ms)`);
+          return e2e;
+        } catch (e) {
+          setStatus(id, "err", "error: " + e.message);
+          setBody(id, e.message, true);
+          return null;
+        }
+      }
 
-async function fetchRuntime(id, port, fn) {
-  setStatus(id, 'running', 'running…');
-  const t0 = performance.now();
-  const isWeather = fn === 'c/weather_fmt' || fn === 'python/weather_fmt';
-  const isPrime = PRIME_FUNCTIONS.includes(fn);
-  const inputVal = document.getElementById('fnInput').value.trim();
-  let reqBody = undefined;
-  if (isWeather) reqBody = String(port);
-  else if (isPrime && inputVal) reqBody = inputVal;
-  try {
-    const resp = await fetch(`http://localhost:${port}/${fn}`, {
-      method: reqBody !== undefined ? 'POST' : 'GET',
-      body: reqBody,
-    });
-    const e2e = performance.now() - t0;
-    const cold = parseFloat(resp.headers.get('X-Cold-Start') || 0);
-    const exec = parseFloat(resp.headers.get('X-Exec-Time') || 0);
-    const body = await resp.text();
-    setMetrics(id, cold, exec, e2e);
-    setBody(id, body, !resp.ok);
-    setStatus(id, 'done', `done (${e2e.toFixed(0)} ms)`);
-    return e2e;
-  } catch(e) {
-    setStatus(id, 'err', 'error: ' + e.message);
-    setBody(id, e.message, true);
-    return null;
-  }
-}
+      async function runAll() {
+        const fn = document.getElementById("fnSelect").value;
+        const btn = document.getElementById("runBtn");
+        btn.disabled = true;
 
-async function runAll() {
-  const fn = document.getElementById('fnSelect').value;
-  const btn = document.getElementById('runBtn');
-  btn.disabled = true;
+        // Update native port label
+        document.getElementById("native-port").textContent = ":9381 (native)";
 
-  // Update native port label
-  document.getElementById('native-port').textContent =
-    ':8081 (native)';
+        ["native", "kvm", "docker"].forEach(resetCol);
 
-  ['native','kvm','docker'].forEach(resetCol);
+        const [nativeE2e, kvmE2e, dockerE2e] = await Promise.all([
+          fetchRuntime("native", PORT_MAP.native(), fn),
+          fetchRuntime("kvm", PORT_MAP.kvm(), fn),
+          fetchRuntime("docker", PORT_MAP.docker(), fn),
+        ]);
 
-  const [nativeE2e, kvmE2e, dockerE2e] = await Promise.all([
-    fetchRuntime('native', PORT_MAP.native(), fn),
-    fetchRuntime('kvm',    PORT_MAP.kvm(),    fn),
-    fetchRuntime('docker', PORT_MAP.docker(), fn),
-  ]);
+        // Draw relative bars
+        const times = [nativeE2e, kvmE2e, dockerE2e].filter((t) => t !== null);
+        const maxE2e = Math.max(...times);
+        [
+          ["native", nativeE2e],
+          ["kvm", kvmE2e],
+          ["docker", dockerE2e],
+        ].forEach(([id, t]) => {
+          if (t !== null) setBar(id, t, maxE2e);
+        });
 
-  // Draw relative bars
-  const times = [nativeE2e, kvmE2e, dockerE2e].filter(t => t !== null);
-  const maxE2e = Math.max(...times);
-  [['native', nativeE2e], ['kvm', kvmE2e], ['docker', dockerE2e]].forEach(([id, t]) => {
-    if (t !== null) setBar(id, t, maxE2e);
-  });
+        btn.disabled = false;
 
-  btn.disabled = false;
-
-  // Fetch and display source code
-  try {
-    const src = await fetch(`http://localhost:8081/source/${fn}`);
-    if (src.ok) {
-      document.getElementById('sourceLabel').textContent = `source: ${fn}`;
-      document.getElementById('sourceCode').textContent = await src.text();
-      document.getElementById('sourcePanel').style.display = 'block';
-    }
-  } catch(e) {}
-}
-</script>
-</body>
+        // Fetch and display source code
+        try {
+          const src = await fetch(`http://localhost:9381/source/${fn}`);
+          if (src.ok) {
+            document.getElementById("sourceLabel").textContent =
+              `source: ${fn}`;
+            document.getElementById("sourceCode").textContent =
+              await src.text();
+            document.getElementById("sourcePanel").style.display = "block";
+          }
+        } catch (e) {}
+      }
+    </script>
+  </body>
 </html>
