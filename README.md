@@ -57,7 +57,7 @@ make -C samples proc docker-all
 ./scripts/demo.sh
 ```
 
-Open http://localhost:8081 in your browser to compare native, KVM, and Docker runtimes side-by-side.
+Open http://localhost:9381 in your browser to compare native, KVM, and Docker runtimes side-by-side.
 
 ### Run a Single Function (KVM)
 
@@ -65,33 +65,37 @@ Open http://localhost:8081 in your browser to compare native, KVM, and Docker ru
 ./scripts/run_sample.sh c/hello.elf
 ```
 
-### Try the Serverless Experience
+Note that you have to prefix `c/<func>.elf` for C functions and `python/<func>.elf` for Python functions.
+
+### Invoke a Function via the API Gateway
+
+Start the gateway.
 
 ```bash
-cd gateway && ./gateway -runtime=kvm
+cd gateway && ./gateway -runtime=kvm -port 9381
 ```
 
 Then invoke functions via HTTP:
 
 ```bash
 # GET request
-curl http://localhost:8080/c/hello
+curl http://localhost:9381/c/hello
 
 # POST with input (e.g., find the 10000th prime)
-curl -X POST -d "10000" http://localhost:8080/c/prime
+curl -X POST -d "10000" http://localhost:9381/c/prime
 ```
 
 ## Gateway Runtimes
 
 The gateway supports multiple runtimes via the `-runtime` flag:
 
-| Flag | Description |
-|------|-------------|
-| `-runtime=native` | Auto-selects: `process` for `c/*`, `python3` for `python/*` |
-| `-runtime=kvm` | Runs `.elf` binaries in KVM microVM |
-| `-runtime=process` | Runs `_proc` binaries as native Linux processes |
-| `-runtime=python` | Runs `.py` scripts with system `python3` |
-| `-runtime=docker` | Runs functions in Docker containers |
+| Flag                | Description                                                            |
+| ------------------- | ---------------------------------------------------------------------- |
+| `-runtime=native`   | Auto-selects: `process` for `c/*`, `python3` for `python/*`            |
+| `-runtime=kvm`      | Runs `.elf` binaries in KVM microVM                                    |
+| `-runtime=process`  | Runs `_proc` binaries as native Linux processes                        |
+| `-runtime=python`   | Runs `.py` scripts with system `python3`                               |
+| `-runtime=docker`   | Runs functions in Docker containers                                    |
 | `-runtime=junction` | Runs native binaries under Junction libOS (requires `-junction-build`) |
 
 **Junction example:**
@@ -120,6 +124,7 @@ cd gateway && go run main.go -runtime=junction -junction-build=/path/to/junction
 ```
 
 The benchmark automatically:
+
 1. Builds native process binaries and Docker images
 2. Starts/stops gateways for each runtime
 3. Prints a comparative report with cold start, execution time, E2E latency, and binary size
@@ -134,6 +139,7 @@ python3 scripts/plot_benchmark.py
 ```
 
 This generates four PNG graphs in `scripts/`:
+
 - `bench_cold_start.png` — Cold start latency comparison
 - `bench_exec_time.png` — Execution time comparison
 - `bench_e2e.png` — End-to-end latency comparison
@@ -166,14 +172,15 @@ Each test displays cold start, execution time, and E2E latency.
 
 **Cold Start:**
 
-| Runtime | c/hello | python/hello |
-|---------|---------|-------------|
-| Native process | 1.3 ms | 21.2 ms |
-| **KVM** | **20.2 ms** | **20.5 ms** |
-| Junction | 30.6 ms | 63.1 ms |
-| Docker | 177.1 ms | 276.8 ms |
+| Runtime        | c/hello     | python/hello |
+| -------------- | ----------- | ------------ |
+| Native process | 1.3 ms      | 21.2 ms      |
+| **KVM**        | **20.2 ms** | **20.5 ms**  |
+| Junction       | 30.6 ms     | 63.1 ms      |
+| Docker         | 177.1 ms    | 276.8 ms     |
 
 **Key Insights:**
+
 - KVM cold start (~20ms) matches native Python and provides full VM isolation
 - KVM MicroPython unikernel is 262 KB vs 7.7 MB for CPython — 30x smaller
 - Native C process has sub-1.5ms cold start
